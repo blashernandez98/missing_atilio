@@ -1,0 +1,204 @@
+#container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 100%;
+    background-color: #e7e7e7;
+}
+
+header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
+    margin-top: 15px;
+    max-height: 20px;
+}
+
+header > h1 {
+    margin-right: 3vw;
+    font-size: 2vh;
+}
+
+#game {
+    text-align: center;
+    justify-content: center;
+    display: flex;
+    max-width: 900px;
+    height: 100%;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+#field {
+    margin: 0 10vw;
+    display: flex;
+    flex-direction: column;
+    background-image: url("../images/Football_field.svg.png");
+    background-size: 100% 100%;
+    justify-content: space-between;
+    height: 500px;
+    width: 80vw;
+    padding: 4vh 0;
+}
+
+@media only screen and (min-width: 1000px){
+    #cancha {
+        width: 55vw;
+        height: 90vh;
+        min-height: 600px;
+    }
+}
+
+
+.wordle {
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #e7e7e7;
+    display: none;
+}
+
+#tablero {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 20px;
+    max-height: 80vh;
+    max-width: 700px;
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    text-align: center;
+    padding: 10px 0;
+    width: 60vw;
+    max-width: 700px;
+}
+
+.square {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid hsla(0,0%,50%,.8);
+    border-radius: 999px;
+    flex: 1 1;
+    font-size: 18px;
+    font-weight: 700;
+    height: 35px;
+    line-height: 1;
+    margin: 2px;
+    max-width: 35px;
+    text-transform: uppercase;
+    width: 35px;
+    background-color: lightgrey;
+}
+
+.space-div {
+    min-width: 10px;
+}
+
+.pop-div {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 3;
+    padding: 20px 20px;
+    background-color: lightblue;
+    box-shadow: inset 0 3px 6px rgba(0,0,0,0.16), 0 4px 6px rgba(0,0,0,0.45);
+    border-radius: 10px;
+    line-height: 18pt;
+    transition: all 2s ease-in-out;
+}
+
+.close-btn {
+    position: relative;
+    top: 0px;
+    right: 0px;
+    background: none;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.close-img {
+    max-width: 25px;
+    max-height: 25px;
+    margin-top: 10px;
+}
+
+.position {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+}
+
+.player {
+    background-color: #e7e7e7;
+    height: 50px;
+    width: 50px;
+    border-radius: 50%;
+    margin: 0px 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    position: relative;
+    cursor: pointer;
+    color: black;   
+    border-radius: 50px;
+}
+
+
+.nombre {
+    margin-top: 10px;
+    position: absolute;
+    bottom: -20px;
+    pointer-events: none;
+    font-size: small;
+    color: black;
+    font-weight: bold;
+}
+
+.letters {
+    pointer-events: none;
+}
+
+footer {
+    margin-bottom: 3vh;
+}
+
+#ataque {
+    margin-bottom: 5vh;
+}
+
+#back-btn {
+    width: 70px;
+}
+
+.perfect {
+    background-color: green;
+}
+
+.almost {
+    background-color: yellow;
+}
+
+.wrong {
+    background-color: gray;
+}
+
+#match-info-btn {
+    cursor: pointer;
+}

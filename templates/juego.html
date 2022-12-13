@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<link rel="stylesheet" href="../static/css/game.css">
+<script src="../static/js/guess.js"></script>
+<script src="../static/js/main.js"></script>
+{% endblock %}
+
+{% block body %}
+<div id="container">
+    <header>
+        <h1>Missing 11 Atilio</h1>
+        <button id="match-info-btn">Información</button>
+    </header>
+    <div id="game" match='{{ match|tojson }}'>
+        <div id="match-info-div" class="pop-div">
+            <div id="fecha"></div>
+            <div id="rival"></div>
+            <div id="resultado"></div>
+            <div id="estadio"></div>
+            <button id="close-info">
+                <img src="../static/images/close.png" class="close-img" alt="close button">
+            </button>
+        </div>
+        <div id="game-finish" class="pop-div">
+            <h2>Felicitaciones</h2>
+            <h3>Estas muy bolso</h3>
+            <h4 id="score"></h4>
+            <button id="close-result" class="close-btn">
+                <img src="../static/images/close.png" class="close-img" alt="close button">
+            </button>
+        </div>
+        <div id="field">
+            <div class="position" id="golero">
+                <div class="player" id="po">
+                    <div class="letters">6</div>
+                    <div class="nombre">******</div>
+                </div>
+            </div>
+            <div class="position" id="defensa">
+                <div class="player" id="ld">
+                    <div class="letters">9</div>
+                    <div class="nombre">*********</div>
+                </div>
+                <div class="player" id="zd">
+                    <div class="letters">7</div>
+                    <div class="nombre">*******</div>
+                </div>
+                <div class="player" id="zi">
+                    <div class="letters">6</div>
+                    <div class="nombre">******</div>
+                </div>
+                <div class="player" id="li">
+                    <div class="letters">6</div>
+                    <div class="nombre">******</div>
+                </div>
+            </div>
+            <div class="position" id="medio">
+                <div class="player" id="md">
+                    <div class="letters">6</div>
+                    <div class="nombre">******</div>
+                </div>
+                <div class="player" id="mcd">
+                    <div class="letters">9</div>
+                    <div class="nombre">*********</div>
+                </div>
+                <div class="player" id="mci">
+                    <div class="letters">8</div>
+                    <div class="nombre">********</div>
+                </div>
+                <div class="player" id="mi">
+                    <div class="letters">7</div>
+                    <div class="nombre">*******</div>
+                </div>
+            </div>
+            <div class="position" id="ataque">
+                <div class="player" id="dd">
+                    <div class="letters">8</div>
+                    <div class="nombre">******</div>
+                </div>
+                <div class="player" id="di">
+                    <div class="letters">6</div>
+                    <div class="nombre">******</div>
+                </div>
+            </div>
+        </div>
+        <div class="wordle" id="guess">
+            <button id="back-btn" class="close-btn">Atras</button>
+            <div id="board"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
