@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from "react";
+import React, { useContext } from "react";
 import Letter from "./Letter";
 import { AppContext } from "@/app/components/App";
 import { WordleContext } from './Wordle';
@@ -6,10 +6,6 @@ import { WordleContext } from './Wordle';
 export function Board() {
   const { currentPlayer, guesses } = useContext(AppContext);
   const { currentPlayerName } = useContext(WordleContext);
-
-  useEffect(() => {
-    console.log("opnening board", currentPlayer, currentPlayerName);
-  }, [currentPlayer]);
 
   return (
     <div className="flex flex-col w-full items-center justify-center p-10 gap-2">

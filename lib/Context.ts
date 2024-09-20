@@ -12,9 +12,10 @@ export const defaultAppContext = {
   solved: {} as Solved,
   setSolved: (solved: Solved) => {},
   toggleInfo: () => {},
-  toggleHelp: () => {},
   gameOver: false,
   toggleGameOver: () => {},
+  instructions: false,
+  toggleInstructions: () => {},
   infoCard: true,
 }
 

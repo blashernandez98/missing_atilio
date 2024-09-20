@@ -25,6 +25,10 @@ function Wordle() {
     setCurrentTry(guesses[currentPlayer].length - 1);
   }, [guesses, currentPlayer]);
 
+  useEffect(() => {
+    letterHints(guesses[currentPlayer][currentTry]);
+  }, [currentPlayer]);
+
   const currentPlayerName = partido["equipo"] ? partido["equipo"][currentPlayer].toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -93,7 +97,6 @@ function Wordle() {
       const letterStateRes = correct ? "correct" : almost ? "almost" : "error";
 
       currentLetterStates[guessLetter as keyof typeof currentLetterStates] = letterStateRes;
-      console.log(currentLetterStates);
     }
     setLetterStates(currentLetterStates);
   };

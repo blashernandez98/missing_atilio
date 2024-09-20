@@ -20,10 +20,11 @@ function Jugador({ position }: JugadorProps) {
 
   const openBoard = () => {
     if (solved[position]) return;
-    console.log("setting currentplayer to", position)
     setCurrentPlayer(position);
     toggleFieldMode();
   };
+
+  const player_name_length = currentPlayerName.length;
 
   // flex justify-center items-center h-20 w-20 rounded-full bg-red-500 shadow-lg text-xl font-bold text-slate-50
   return (
@@ -31,9 +32,10 @@ function Jugador({ position }: JugadorProps) {
       <div className="relative flex justify-center items-center" onClick={ openBoard }>
         <Image src='/camiseta.png' alt='Camiseta Nacional' width='50' height='50' className='w-16 h-16 aspect-auto' />
         <span className='absolute text-red-600 text-2xl font-bold'>{ solved[position] ? solved[position] : "?" }</span>
+        <span className='absolute bottom-0 rounded-full bg-[#1e3c72] text-slate-50 text-xs font-bold px-1'>{ player_name_length }</span>
       </div>
 
-      <span className="text-lg font-extrabold text-slate-50">
+      <span className="text-lg font-extrabold text-slate-50 mt-2">
         { solved[position]
           ? currentPlayerName.join("").toUpperCase()
           : currentPlayerName.join("").replace(/./g, "*") }

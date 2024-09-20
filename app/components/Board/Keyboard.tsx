@@ -32,7 +32,7 @@ export function Keyboard() {
     // Check for enter and delete keys
     if (letter === "ENTER" || letter === "DEL") return false;
     // Check for unused letter
-    if (!guesses[currentPlayer].flat().includes(letter.toLowerCase())) return false;
+    if (!guesses[currentPlayer].flat().includes(letter.toUpperCase())) return false;
     // Check for wrong letter
     const correct = currentPlayerName.includes(letter.toLowerCase());
     return correct ? false : true;

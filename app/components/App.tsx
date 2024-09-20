@@ -4,6 +4,7 @@ import Field from "@/app/components/Field/Field";
 import Wordle from "@/app/components/Board/Wordle";
 import GameOver from "@/app/components/GameOver";
 import InfoCard from "@/app/components/InfoCard";
+import Instructions from '@/app/components/Instructions';
 import { createContext, useState, useEffect } from "react";
 import { defaultAppContext } from "@/lib/Context"
 import { Partido, Guesses, Solved } from "@/lib/types";
@@ -22,12 +23,11 @@ function App() {
   const [currentPlayer, setCurrentPlayer] = useState(1);
   const [solved, setSolved] = useState<Solved>(defaultAppContext.solved);
   const [infoCard, setInfoCard] = useState(true);
-  const [helpCard, setHelpCard] = useState(false);
   const [gameOver, setGameOver] = useState(false);
+  const [instructions, setInstructions] = useState(false);
 
   useEffect(() => {
     if (partido["equipo"]) return;
-    console.log("cambio el currentplayer")
     const partidoElegido = partidos_data[Math.floor(Math.random() * data.length)]
     setPartido(partidoElegido);
     setPlayerName(partidoElegido["equipo"][currentPlayer].toLowerCase()
@@ -47,13 +47,13 @@ function App() {
     setInfoCard(!infoCard);
   };
 
-  const toggleHelp = () => {
-    setHelpCard(!helpCard);
-  }
-
   const toggleGameOver = () => {
     setGameOver(!gameOver);
   };
+
+  const toggleInstructions = () => {
+    setInstructions(!instructions);
+  }
 
   return (
     <div className="relative bg-gradient-to-r from-[#1e3c72] to-[#2a5298] w-full min-h-screen">
@@ -69,13 +69,15 @@ function App() {
           solved,
           setSolved,
           toggleInfo,
-          toggleHelp,
           gameOver,
           toggleGameOver,
+          instructions,
+          toggleInstructions,
           infoCard,
         } }
       >
         <InfoCard />
+        <Instructions />
         <nav className='w-full flex items-center justify-center p-5 gap-2'>
           <h1 className='text-4xl font-bold text-slate-50'>Missing Atilio</h1>
           <Image src='/atilio2.jpg' alt='Atilio Garcia' width='60' height='60' className='rounded-lg' />
