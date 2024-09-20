@@ -53,12 +53,14 @@ export function Keyboard() {
           return <Key key={ `line2_${key}` } keyVal={ key } disabledKey={ disabledKey } />;
         }) }
       </div>
-      <div className="grid grid-cols-9 rounded-sm place-items-center">
-        <Key keyVal="ENTER" disabledKey={ false } />
+      <div className="grid grid-cols-7 rounded-sm place-items-center">
         { keys3.map((key) => {
           let disabledKey = activeLetter(key);
           return <Key key={ `line2_${key}` } keyVal={ key } disabledKey={ disabledKey } />;
         }) }
+      </div>
+      <div className='flex justify center'>
+        <Key keyVal="ENTER" disabledKey={ false } />
         <Key keyVal="DEL" disabledKey={ false } />
       </div>
     </div>

@@ -115,6 +115,9 @@ function Wordle() {
         currentPlayerName,
       } }
     >
+      <div className='w-full flex justify-center'>
+        <button onClick={ toggleFieldMode } className='bg-gradient-to-r from-rose-600 to-red-500 rounded-md text-center p-2 text-white'>Volver</button>
+      </div>
       <Board />
       <Keyboard />
     </WordleContext.Provider>

@@ -21,7 +21,7 @@ function Key({ keyVal, disabledKey }: KeyProps) {
     }
   };
 
-  const specialKeyClasses = keyVal === "ENTER" || keyVal === "DEL" ? "w-10 sm:w-14" : "w-6 sm:w-10"
+  const specialKeyClasses = keyVal === "ENTER" || keyVal === "DEL" ? "" : "w-6 sm:w-10"
   const disabledClasses = letterStates[keyVal] === 'error' ? ' bg-zinc-400' : '';
 
   return (
