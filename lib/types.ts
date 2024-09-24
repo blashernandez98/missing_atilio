@@ -7,6 +7,12 @@ export interface Partido {
   torneo: string
 }
 
+export interface Cronograma {
+  liveDate: string
+  formation: string
+  gameIndex: number
+}
+
 export interface Guesses {
   [key: number]: string[][]
 }

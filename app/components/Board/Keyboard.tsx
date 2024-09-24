@@ -40,7 +40,7 @@ export function Keyboard() {
 
 
   return (
-    <div className="flex flex-col w-full items-center justify-center gap-5">
+    <div className="flex flex-col w-full items-center justify-center gap-5 p-2">
       <div className="grid grid-cols-10 rounded-sm">
         { keys1.map((key) => {
           let disabledKey = activeLetter(key);

@@ -36,7 +36,7 @@ function Instructions() {
     <Modal isOpen={ instructions } onClose={ toggleInstructions }>
       <div
         ref={ modalContentRef }  // Assign the ref to the scrollable content
-        className='flex flex-col rounded-md items-center relative p-5 max-h-96 overflow-y-auto bg-[#1e3c72] text-white'>
+        className='flex flex-col rounded-md items-center relative p-5 max-h-96 md:max-h-[500px] overflow-y-scroll bg-[#1e3c72] text-white'>
         <button className='absolute top-2 right-2 rounded-full bg-red-500 w-5 h-5 text-white font-bold flex justify-center items-center' onClick={ handleClose }>x</button>
         <h2 className='text-3xl font-bold text-center my-2'>Como Jugar</h2>
         { tutorialState === 0 && (
@@ -49,7 +49,6 @@ function Instructions() {
             <ul className='text-left list-disc my-3 p-3'>
               <li className='text-sm'><strong>Un signo de pregunta</strong>, que una vez aciertes el nombre se convertira en el número de intentos que te llevó.</li>
               <li className='text-sm'><strong>Un número</strong> que indica la cantidad de letras que tiene el nombre del jugador.</li>
-              <li className='text-sm'><strong>El nombre de el jugador</strong> oculto con asteriscos, si no lo adivinaste. O el nombre del jugador una vez resuelto.</li>
             </ul>
             <JugadorDummy player_name={ 'atilio' } handleClick={ handleNextPhase } />
 
@@ -61,7 +60,7 @@ function Instructions() {
         { tutorialState === 1 && (
           <>
             <p className='text-md text-left my-2'>
-              Despues de elegir un jugador vas a ver esta pantalla con tus intentos.
+              Despues de elegir un jugador vas a ver esta grilla con tus intentos.
               <br />
               Tenes <strong>5 intentos por jugador</strong>.
               <br />
@@ -81,7 +80,10 @@ function Instructions() {
               <li className='text-sm my-1'><strong>Verde</strong> si la letra está en la posición correcta.</li>
             </ul>
             <p className='text-md text-left my-2'>
-              <strong>Ojo</strong>, en este caso tenemos una 'O' verde en la 6ta letra y otra amarilla en la 2da letra, esto no implica que <strong>necesariamente</strong> haya otra '0' en el nombre además de la 6ta.
+              <strong>Ojito con esto:</strong>, en este caso tenemos una 'O' verde en la 6ta letra y otra amarilla en la 2da letra, esto no implica que <strong>necesariamente</strong> haya otra 'O' en el nombre además de la 6ta.
+            </p>
+            <p className='text-md text-left my-2'>
+              La última es que si un jugador tiene una enie, tenes que poner una N. Mala mia.
             </p>
             <p className='text-md text-left my-2'>
               <strong>¡Suerte Bolso!</strong>

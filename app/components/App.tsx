@@ -7,20 +7,33 @@ import InfoCard from "@/app/components/InfoCard";
 import Instructions from '@/app/components/Instructions';
 import { createContext, useState, useEffect } from "react";
 import { defaultAppContext } from "@/lib/Context"
-import { Partido, Guesses, Solved } from "@/lib/types";
-import data from "@/app/partidos.json";
+import { Partido, Guesses, Solved, Cronograma } from "@/lib/types";
+import data from "@/app/data/partidos.json";
+import cronograma from "@/app/data/cronograma.json";
 import Image from 'next/image';
 
 export const AppContext = createContext(defaultAppContext);
 
 const partidos_data = data as Partido[];
+const cronograma_data = cronograma as Cronograma[];
+
+// Get current day in dd/mm/yyyy format
+const today = new Date();
+const todayString = today.toISOString().split("T")[0].split('-').reverse().join('-');
+
+// Get the index of the current game
+let currentGame = cronograma_data.find(game => game.liveDate === todayString);
+if (!currentGame) {
+  console.error("No hay partido programado para hoy");
+  currentGame = cronograma_data[0];
+}
 
 function App() {
   const [fieldMode, setFieldMode] = useState(true);
   const [partido, setPartido] = useState<Partido>(defaultAppContext.partido);
   const [player_name, setPlayerName] = useState<string[]>([]); // ["a", "t", "i", "l", "i", "o"
   const [guesses, setGuesses] = useState<Guesses>(defaultAppContext.guesses);
-  const [currentPlayer, setCurrentPlayer] = useState(1);
+  const [currentPlayer, setCurrentPlayer] = useState(2);
   const [solved, setSolved] = useState<Solved>(defaultAppContext.solved);
   const [infoCard, setInfoCard] = useState(true);
   const [gameOver, setGameOver] = useState(false);
@@ -28,14 +41,17 @@ function App() {
 
   useEffect(() => {
     if (partido["equipo"]) return;
-    const partidoElegido = partidos_data[Math.floor(Math.random() * data.length)]
+    const partidoElegido = partidos_data[currentGame ? currentGame.gameIndex : 0];
+    console.log(partidoElegido)
     setPartido(partidoElegido);
-    setPlayerName(partidoElegido["equipo"][currentPlayer].toLowerCase()
+    const playerName = partidoElegido["equipo"][currentPlayer].toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .trim()
       .split(", ")[0]
-      .split(""))
+      .split("")
+    console.log(playerName)
+    setPlayerName(playerName);
   }, [currentPlayer, partido]);
 
 
@@ -56,7 +72,7 @@ function App() {
   }
 
   return (
-    <div className="relative bg-gradient-to-r from-[#1e3c72] to-[#2a5298] w-full min-h-screen">
+    <div className="relative bg-gradient-to-r from-[#1e3c72] to-[#2a5298] min-h-screen flex flex-col justify-around">
       <AppContext.Provider
         value={ {
           toggleFieldMode,
@@ -78,15 +94,15 @@ function App() {
       >
         <InfoCard />
         <Instructions />
-        <nav className='w-full flex items-center justify-center p-5 gap-2'>
+        <nav className='flex items-center justify-center p-5 gap-2'>
           <h1 className='text-4xl font-bold text-slate-50'>Missing Atilio</h1>
           <Image src='/atilio2.jpg' alt='Atilio Garcia' width='60' height='60' className='rounded-lg' />
         </nav>
 
-        { fieldMode ? <Field /> : <Wordle /> }
+        { fieldMode ? <Field formation={ currentGame ? currentGame.formation : '4-4-2' } /> : <Wordle /> }
         <GameOver />
-        <footer className='bottom-0 flex items-center justify-center h-10 w-full mt-10'>
-          <h1 className='text-lg font-light text-slate-50 text-center'>Hecho por Blas Hernández</h1>
+        <footer className='w-full flex items-center justify-center mt-10'>
+          <h1 className='text-sm md:text-lg font-bold text-slate-200 text-center my-2'>Hecho por Blas Hernández</h1>
         </footer>
       </AppContext.Provider>
     </div>

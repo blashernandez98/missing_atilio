@@ -79,10 +79,15 @@ function Wordle() {
     }
     const newGuess = [...guesses[currentPlayer]];
     newGuess[currentTry][currentLetter] = key;
+    if (currentPlayerName[currentLetter + 1] === ' ') {
+      newGuess[currentTry][currentLetter + 1] = ' ';
+      setCurrentLetter(currentLetter + 2);
+    } else {
+      setCurrentLetter(currentLetter + 1);
+    }
     let newGuesses = { ...guesses };
     newGuesses[currentPlayer] = newGuess;
     setGuesses(newGuesses);
-    setCurrentLetter(currentLetter + 1);
   };
 
   const letterHints = (guess: string[]) => {

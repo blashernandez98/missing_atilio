@@ -12,22 +12,27 @@ export function Board() {
       { [...Array(5)].map((_, indexRow) => (
         <div className="flex flex-row w-80 sm:w-[500px] md:w-[600px] justify-center items-center gap-1" key={ indexRow }>
           { currentPlayerName.map((letter, indexLetter) => (
-            <Letter
-              letterPos={ indexLetter }
-              letter={
-                guesses[currentPlayer][indexRow] &&
-                  guesses[currentPlayer][indexRow][indexLetter]
-                  ? guesses[currentPlayer][indexRow][indexLetter]
-                  : ""
-              }
-              correctName={ currentPlayerName }
-              tryRow={ indexRow }
-              key={ `${indexRow}:${indexLetter}` }
-            />
+            currentPlayerName[indexLetter] === ' ' ? (
+              <div key={ `${indexRow}:${indexLetter}` } className="w-6 h-6" />
+            ) : (
+              <Letter
+                letterPos={ indexLetter }
+                letter={
+                  guesses[currentPlayer][indexRow] &&
+                    guesses[currentPlayer][indexRow][indexLetter]
+                    ? guesses[currentPlayer][indexRow][indexLetter]
+                    : ""
+                }
+                correctName={ currentPlayerName }
+                tryRow={ indexRow }
+                key={ `${indexRow}:${indexLetter}` }
+              />
+            )
           )) }
         </div>
       )) }
     </div>
+
   );
 }
 
