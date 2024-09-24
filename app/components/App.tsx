@@ -35,14 +35,14 @@ function App() {
   const [guesses, setGuesses] = useState<Guesses>(defaultAppContext.guesses);
   const [currentPlayer, setCurrentPlayer] = useState(2);
   const [solved, setSolved] = useState<Solved>(defaultAppContext.solved);
-  const [infoCard, setInfoCard] = useState(true);
+  const [infoCard, setInfoCard] = useState(true); // HERE
   const [gameOver, setGameOver] = useState(false);
   const [instructions, setInstructions] = useState(false);
 
   useEffect(() => {
     if (partido["equipo"]) return;
     const partidoElegido = partidos_data[currentGame ? currentGame.gameIndex : 0];
-    console.log(partidoElegido)
+    console.log(partidoElegido) // Remove before production
     setPartido(partidoElegido);
     const playerName = partidoElegido["equipo"][currentPlayer].toLowerCase()
       .normalize("NFD")
@@ -50,7 +50,6 @@ function App() {
       .trim()
       .split(", ")[0]
       .split("")
-    console.log(playerName)
     setPlayerName(playerName);
   }, [currentPlayer, partido]);
 
@@ -96,7 +95,7 @@ function App() {
         <Instructions />
         <nav className='flex items-center justify-center p-5 gap-2'>
           <h1 className='text-4xl font-bold text-slate-50'>Missing Atilio</h1>
-          <Image src='/atilio2.jpg' alt='Atilio Garcia' width='60' height='60' className='rounded-lg' />
+          <Image src='/atilio_grande.png' alt='Atilio Garcia' width='60' height='60' className='rounded-lg' />
         </nav>
 
         { fieldMode ? <Field formation={ currentGame ? currentGame.formation : '4-4-2' } /> : <Wordle /> }
