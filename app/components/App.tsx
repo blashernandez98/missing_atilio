@@ -31,11 +31,11 @@ if (!currentGame) {
 function App() {
   const [fieldMode, setFieldMode] = useState(true);
   const [partido, setPartido] = useState<Partido>(defaultAppContext.partido);
-  const [player_name, setPlayerName] = useState<string[]>([]); // ["a", "t", "i", "l", "i", "o"
+  const [player_name, setPlayerName] = useState<string[]>([]);
   const [guesses, setGuesses] = useState<Guesses>(defaultAppContext.guesses);
   const [currentPlayer, setCurrentPlayer] = useState(2);
   const [solved, setSolved] = useState<Solved>(defaultAppContext.solved);
-  const [infoCard, setInfoCard] = useState(true); // HERE
+  const [infoCard, setInfoCard] = useState(true);
   const [gameOver, setGameOver] = useState(false);
   const [instructions, setInstructions] = useState(false);
 

@@ -49,19 +49,21 @@ function Jugador({ position, locationX, locationY }: JugadorProps) {
 
   let length_string = player_name_length.join(", ");
   let location_classes = `col-start-${locationX} row-start-${locationY}`;
+  const solved_font_classes = (solved[position] && solved[position] < 6) ? "text-slate-50" : "text-red-700";
+  const guesses_text = (!solved[position]) ? "?" : (solved[position] < 6) ? solved[position] : "X";
 
   // flex justify-center items-center h-20 w-20 rounded-full bg-red-500 shadow-lg text-xl font-bold text-slate-50
   return (
     <div className={ `${location_classes} flex flex-col items-center hover:cursor-pointer hover:scale-105` }>
       <div className="relative flex justify-center items-center" onClick={ openBoard }>
         <Image src='/camiseta.png' alt='Camiseta Nacional' width='50' height='50' className='w-12 sm:w-16 md:w-20 aspect-auto' />
-        <span className='absolute top-1 sm:top-2 text-red-600 text-2xl md:text-3xl font-bold'>{ solved[position] ? solved[position] : "?" }</span>
+        <span className='absolute top-1 sm:top-2 text-red-600 text-2xl md:text-3xl font-bold'>{ guesses_text }</span>
         <span className='absolute bottom-[-10px] rounded-full bg-[#1e3c72] text-slate-50 text-xs h-6 md:text-sm md:h-8 aspect-square font-bold flex items-center justify-center'>
           { length_string }
         </span>
       </div>
 
-      <span className="text-xs md:text-lg font-semibold text-slate-50 mt-2 text-center">
+      <span className={ `text-xs md:text-lg mt-2 font-semibold text-center ${solved_font_classes}` }>
         { solved[position]
           && currentPlayerName.join("").toUpperCase() }
       </span>

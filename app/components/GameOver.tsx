@@ -12,9 +12,9 @@ function GameOver() {
   let descripcion = ""
   let imagen = ""
 
-  for (const player in solved) {
-    solvedPlayers++;
-    numberOfGuesses += solved[player];
+  for (let i = 1; i <= 11; i++) {
+    if (solved[i] < 6) solvedPlayers++;
+    numberOfGuesses += solved[i];
   }
 
   if (solvedPlayers <= 7) {

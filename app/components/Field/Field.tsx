@@ -13,8 +13,6 @@ function Field({ formation }: FieldProps) {
 
   const coordenadas: Formation = Formaciones[formation];
 
-
-
   useEffect(() => {
     if (Object.keys(solved).length === 11) toggleGameOver();
   }, [solved]);
