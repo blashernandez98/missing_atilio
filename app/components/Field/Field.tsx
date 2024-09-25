@@ -30,7 +30,7 @@ function Field({ formation }: FieldProps) {
         <div className="absolute inset-0 bg-football-field bg-no-repeat bg-contain opacity-50"></div>
         <div className="relative z-10 grid grid-rows-6 grid-cols-5 place-items-center py-5 h-[90%] sm:h-[80%]">
           { Array.from({ length: 11 }).map((_, i) => (
-            <Jugador position={ i + 1 } locationX={ coordenadas[i + 1][0] } locationY={ coordenadas[i + 1][1] } />
+            <Jugador key={ i } position={ i + 1 } locationX={ coordenadas[i + 1][0] } locationY={ coordenadas[i + 1][1] } />
           )) }
 
         </div>
