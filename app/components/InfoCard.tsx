@@ -4,7 +4,7 @@ import Modal from '@/app/components/ui/modal'
 import { Spinner } from './ui/spinner';
 
 function InfoCard() {
-  const { partido, toggleInfo, infoCard } = useContext(AppContext);
+  const { partido, toggleInfo, infoCard, toggleInstructions } = useContext(AppContext);
 
   const [loading, setLoading] = useState(true);
 
@@ -12,9 +12,17 @@ function InfoCard() {
     if (partido["equipo"]) setLoading(false);
   }, [partido]);
 
-  const handleClick = () => {
+  const handlePlay = () => {
     toggleInfo();
   };
+
+  const handleInfo = () => {
+    toggleInfo();
+    setTimeout(() => {
+      toggleInstructions();
+    }
+      , 300);
+  }
 
   return (
     <Modal isOpen={ infoCard } onClose={ toggleInfo }>
@@ -32,8 +40,10 @@ function InfoCard() {
           <h2 className='text-4xl font-bold'>{ partido["resultado"] }</h2>
           <p className='text-center'>{ partido["estadio"] }</p>
           <p className='text-center'>{ partido["torneo"] }</p>
-
-          <button className='bg-red-500 rounded-md w-20 h-10 mb-5 text-white font-bold hover:scale-110 transition-all ease-in duration-75' onClick={ handleClick }>JUGAR</button>
+          <div className='grid grid-cols-2 gap-2'>
+            <button className='bg-red-500 col-span-1 rounded-md w-20 h-10 mb-5 text-white font-bold hover:scale-110 transition-all ease-in duration-75' onClick={ handleInfo }>INFO</button>
+            <button className='bg-red-500 col-span-1 rounded-md w-20 h-10 mb-5 text-white font-bold hover:scale-110 transition-all ease-in duration-75' onClick={ handlePlay }>JUGAR</button>
+          </div>
         </>) }
       </div>
     </Modal>

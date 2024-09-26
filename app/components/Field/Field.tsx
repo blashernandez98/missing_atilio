@@ -26,7 +26,7 @@ function Field({ formation }: FieldProps) {
           className="rounded-md hover:scale-110 bg-gradient-to-r from-rose-600 to-red-500 p-2 shadow-md"
           onClick={ toggleInstructions }>Como Jugar</button>
       </div>
-      <div id='cancha' className="relative flex flex-col w-[310px] sm:w-[550px] md:w-[700px] aspect-[2/3]">
+      <div id='cancha' className="relative flex flex-col w-[310px] sm:w-[550px] aspect-[2/3]">
         <div className="absolute inset-0 bg-football-field bg-no-repeat bg-contain opacity-50"></div>
         <div className="relative z-10 grid grid-rows-6 grid-cols-5 place-items-center py-5 h-[90%] sm:h-[80%]">
           { Array.from({ length: 11 }).map((_, i) => (

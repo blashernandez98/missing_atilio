@@ -80,10 +80,10 @@ function Instructions() {
               <li className='text-sm my-1'><strong>Verde</strong> si la letra está en la posición correcta.</li>
             </ul>
             <p className='text-md text-left my-2'>
-              <strong>Ojito con esto:</strong>, en este caso tenemos una 'O' verde en la 6ta letra y otra amarilla en la 2da letra, esto no implica que <strong>necesariamente</strong> haya otra 'O' en el nombre además de la 6ta.
+              <strong>Ojito con esto</strong>, arriba tenemos una <strong>O</strong> verde en la 6ta letra y una amarilla en la 2da letra. Esto <strong>no implica que necesariamente haya otra O</strong> en el nombre.
             </p>
             <p className='text-md text-left my-2'>
-              La última es que si un jugador tiene una enie, tenes que poner una N. Mala mia.
+              La última es que si un jugador tiene una <strong>Ñ</strong>, tenes que poner una <strong>N</strong>. Mala mía.
             </p>
             <p className='text-md text-left my-2'>
               <strong>¡Suerte Bolso!</strong>

@@ -42,7 +42,6 @@ function App() {
   useEffect(() => {
     if (partido["equipo"]) return;
     const partidoElegido = partidos_data[currentGame ? currentGame.gameIndex : 0];
-    console.log(partidoElegido) // Remove before production
     setPartido(partidoElegido);
     const playerName = partidoElegido["equipo"][currentPlayer].toLowerCase()
       .normalize("NFD")
