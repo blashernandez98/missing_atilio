@@ -8,9 +8,10 @@ interface LetterProps {
   letterPos: number;
   correctName: string[];
   tryRow: number;
+  isLongName: boolean;
 }
 
-function Letter({ letter, correctName, letterPos, tryRow }: LetterProps) {
+function Letter({ letter, correctName, letterPos, tryRow, isLongName }: LetterProps) {
   const { currentTry } = useContext(WordleContext);
 
   const correct = letter.toLowerCase() === correctName[letterPos];
@@ -19,9 +20,12 @@ function Letter({ letter, correctName, letterPos, tryRow }: LetterProps) {
   const letterState =
     currentTry > tryRow && (correct ? "bg-green-300" : almost ? "bg-yellow-300" : "bg-zinc-400");
 
+  const sizeClasses = isLongName ? 'w-9 h-9 sm:w-11 sm:h-11 md:w-14 md:h-14' : 'w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20';
+  const textSize = isLongName ? 'text-lg sm:text-xl md:text-2xl' : 'text-xl sm:text-2xl md:text-3xl';
+
   return (
-    <div className="flex items-center justify-center w-12 h-12 sm:w-20 sm:h-20 bg-gradient-to-r from-slate-50 to-slate-100">
-      <div className={ `${letterState ? letterState : 'bg-transparent'}  text-3xl font-bold text-[#1e3c72] flex items-center justify-center w-[90%] h-[90%]` }>
+    <div className={`flex items-center justify-center ${sizeClasses} bg-gradient-to-r from-slate-50 to-slate-100 rounded-md overflow-hidden`}>
+      <div className={ `${letterState ? letterState : 'bg-transparent'} ${textSize} font-bold text-[#1e3c72] flex items-center justify-center w-full h-full` }>
         { letter }
       </div>
     </div>

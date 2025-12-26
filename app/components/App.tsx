@@ -5,28 +5,18 @@ import Wordle from "@/app/components/Board/Wordle";
 import GameOver from "@/app/components/GameOver";
 import InfoCard from "@/app/components/InfoCard";
 import Instructions from '@/app/components/Instructions';
+import Footer from "@/app/components/common/Footer";
 import { createContext, useState, useEffect } from "react";
 import { defaultAppContext } from "@/lib/Context"
 import { Partido, Guesses, Solved, Cronograma } from "@/lib/types";
 import data from "@/app/data/partidos.json";
 import cronograma from "@/app/data/cronograma.json";
 import Image from 'next/image';
-
+import Link from 'next/link';
 export const AppContext = createContext(defaultAppContext);
 
 const partidos_data = data as Partido[];
-const cronograma_data = cronograma as Cronograma[];
-
-// Get current day in dd/mm/yyyy format
-const today = new Date();
-const todayString = today.toISOString().split("T")[0].split('-').reverse().join('-');
-
-// Get the index of the current game
-let currentGame = cronograma_data.find(game => game.liveDate === todayString);
-if (!currentGame) {
-  console.error("No hay partido programado para hoy");
-  currentGame = cronograma_data[0];
-}
+const cronograma_fallback = cronograma as Cronograma[];
 
 function App() {
   const [fieldMode, setFieldMode] = useState(true);
@@ -38,10 +28,55 @@ function App() {
   const [infoCard, setInfoCard] = useState(true);
   const [gameOver, setGameOver] = useState(false);
   const [instructions, setInstructions] = useState(false);
+  const [cronogramaData, setCronogramaData] = useState<Cronograma[]>(cronograma_fallback);
+  const [currentGame, setCurrentGame] = useState<Cronograma | null>(null);
 
+  // Fetch cronograma from API on mount
   useEffect(() => {
-    if (partido["equipo"]) return;
-    const partidoElegido = partidos_data[currentGame ? currentGame.gameIndex : 0];
+    const fetchCronograma = async () => {
+      try {
+        const res = await fetch('/api/cronograma');
+        if (res.ok) {
+          const data = await res.json();
+          setCronogramaData(data);
+          console.log('✅ Cronograma loaded from API');
+        } else {
+          console.warn('⚠️ API failed, using fallback cronograma.json');
+          setCronogramaData(cronograma_fallback);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching cronograma, using fallback:', error);
+        setCronogramaData(cronograma_fallback);
+      }
+    };
+
+    fetchCronograma();
+  }, []);
+
+  // Select current game based on today's date
+  useEffect(() => {
+    if (cronogramaData.length === 0) return;
+
+    // Get current day in dd-mm-yyyy format
+    const today = new Date();
+    const todayString = today.toISOString().split("T")[0].split('-').reverse().join('-');
+
+    // Find game for today
+    let game = cronogramaData.find(g => g.liveDate === todayString);
+    if (!game) {
+      console.error("No hay partido programado para hoy");
+      game = cronogramaData[0];
+      console.log("Selecciono partido: ", game);
+    }
+
+    setCurrentGame(game);
+  }, [cronogramaData]);
+
+  // Load partido when currentGame changes
+  useEffect(() => {
+    if (!currentGame || partido["equipo"]) return;
+
+    const partidoElegido = partidos_data[currentGame.gameIndex];
     setPartido(partidoElegido);
     const playerName = partidoElegido["equipo"][currentPlayer].toLowerCase()
       .normalize("NFD")
@@ -50,7 +85,7 @@ function App() {
       .split(", ")[0]
       .split("")
     setPlayerName(playerName);
-  }, [currentPlayer, partido]);
+  }, [currentPlayer, partido, currentGame]);
 
 
   const toggleFieldMode = () => {
@@ -70,7 +105,7 @@ function App() {
   }
 
   return (
-    <div className="relative bg-gradient-to-r from-[#1e3c72] to-[#2a5298] min-h-screen flex flex-col justify-around">
+    <div className="relative bg-gradient-to-r from-[#1e3c72] to-[#2a5298] min-h-screen flex flex-col">
       <AppContext.Provider
         value={ {
           toggleFieldMode,
@@ -92,16 +127,28 @@ function App() {
       >
         <InfoCard />
         <Instructions />
-        <nav className='flex items-center justify-center p-5 gap-2'>
-          <h1 className='text-4xl font-bold text-slate-50'>Missing Atilio</h1>
-          <Image src='/atilio_grande.png' alt='Atilio Garcia' width='60' height='60' className='rounded-lg' />
+        <nav className='flex items-center justify-between py-6 px-5 gap-3 bg-slate-950/30 backdrop-blur-sm border-b border-slate-700/50'>
+          <Link
+            href="/"
+            className="text-white/80 hover:text-white transition-colors flex items-center gap-2"
+          >
+            <span className="text-2xl">←</span>
+            <span className="hidden sm:inline">Volver</span>
+          </Link>
+
+          <div className='flex items-center gap-3'>
+            <h1 className='text-2xl sm:text-3xl font-bold text-slate-50 tracking-tight'>Missing Atilio</h1>
+            <Image src='/atilio_grande.png' alt='Atilio Garcia' width='50' height='50' className='rounded-lg shadow-lg' />
+          </div>
+
+          <div className="w-16 sm:w-24" /> {/* Spacer for centering */}
         </nav>
 
-        { fieldMode ? <Field formation={ currentGame ? currentGame.formation : '4-4-2' } /> : <Wordle /> }
-        <GameOver />
-        <footer className='w-full flex items-center justify-center mt-10'>
-          <h1 className='text-sm md:text-lg font-bold text-slate-200 text-center my-2'>Hecho por Blas Hernández</h1>
-        </footer>
+        <div className='flex-grow flex flex-col'>
+          { fieldMode ? <Field formation={ currentGame ? currentGame.formation : '4-4-2' } /> : <Wordle /> }
+          <GameOver />
+        </div>
+        <Footer />
       </AppContext.Provider>
     </div>
   );

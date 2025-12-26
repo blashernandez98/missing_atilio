@@ -1,7 +1,7 @@
 import React, { useContext } from "react";
 import { AppContext } from "@/app/components/App";
-import Modal from './ui/modal';
 import Image from 'next/image';
+import Link from 'next/link';
 
 function GameOver() {
   const { solved, toggleGameOver, gameOver } = useContext(AppContext);
@@ -47,26 +47,102 @@ function GameOver() {
     descripcion = 'Si estas viendo esto falló la matrix'
   }
 
+  if (!gameOver) return null;
 
   return (
-    <Modal isOpen={ gameOver } onClose={ toggleGameOver }>
-      <div className='flex flex-col justify-center items-center relative p-6 bg-[#1e3c72] text-white max-h-[500px] overflow-y-scroll'>
-        <button className='absolute top-2 right-2 rounded-full bg-red-500 w-5 h-5 text-white font-bold flex justify-center items-center' onClick={ toggleGameOver }>x</button>
-        <h2 className='text-2xl font-bold text-center my-4'>{ titulo }</h2>
-        <Image src={ imagen } alt='GameOver' width={ 250 } height={ 250 } />
-        <div className='flex flex-row my-5 gap-8'>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div
+        className="
+          bg-gradient-to-br from-slate-800 to-slate-900
+          rounded-2xl p-8 max-w-md w-full
+          border-2 border-slate-600
+          shadow-2xl
+          transform transition-all duration-300
+          animate-scale-in
+        "
+      >
+        {/* Title */}
+        <h2 className="text-3xl font-bold text-white text-center mb-6">
+          {titulo}
+        </h2>
+
+        {/* Image */}
+        {imagen && (
+          <div className="flex justify-center mb-6">
+            <Image src={imagen} alt="GameOver" width={250} height={250} className="rounded-lg" />
+          </div>
+        )}
+
+        {/* Stats */}
+        <div className='flex flex-row justify-center gap-8 mb-6'>
           <div className='flex flex-col items-center gap-2'>
-            <span className='rounded-full bg-green-800 w-14 md:w-20 aspect-square text-center text-2xl md:text-4xl font-bold text-white p-3 flex justify-center items-center'>{ solvedPlayers }</span>
-            <p className='text-center text-xs'>Jugadores Resueltos</p>
+            <span className='rounded-full bg-cyan-700 w-16 md:w-20 aspect-square text-center text-2xl md:text-4xl font-bold text-white flex justify-center items-center shadow-lg'>
+              {solvedPlayers}
+            </span>
+            <p className='text-center text-xs text-white/70'>Jugadores Resueltos</p>
           </div>
           <div className='flex flex-col items-center gap-2'>
-            <span className='rounded-full bg-green-800 w-14 md:w-20 aspect-square text-center text-2xl md:text-4xl font-bold text-white p-3 flex justify-center items-center'>{ numberOfGuesses }</span>
-            <p className='text-center text-xs'>Número de intentos</p>
+            <span className='rounded-full bg-cyan-700 w-16 md:w-20 aspect-square text-center text-2xl md:text-4xl font-bold text-white flex justify-center items-center shadow-lg'>
+              {numberOfGuesses}
+            </span>
+            <p className='text-center text-xs text-white/70'>Número de intentos</p>
           </div>
         </div>
-        <p className='text-left text-sm p-2'>{ descripcion }</p>
+
+        {/* Message */}
+        <p className='text-white/80 text-center mb-8 leading-relaxed'>
+          {descripcion}
+        </p>
+
+        {/* Buttons */}
+        <div className="flex gap-3">
+          <Link href="/" className="flex-1">
+            <button
+              className="
+                w-full px-6 py-3 rounded-xl font-bold
+                bg-slate-700 hover:bg-slate-600
+                text-white shadow-lg
+                transform transition-all duration-200
+                hover:scale-105 hover:shadow-xl
+                active:scale-95
+              "
+            >
+              Inicio
+            </button>
+          </Link>
+          <button
+            onClick={toggleGameOver}
+            className="
+              flex-1 px-6 py-3 rounded-xl font-bold
+              bg-blue-600 hover:bg-blue-500
+              text-white shadow-lg
+              transform transition-all duration-200
+              hover:scale-105 hover:shadow-xl
+              active:scale-95
+            "
+          >
+            Jugar de Nuevo
+          </button>
+        </div>
       </div>
-    </Modal>
+
+      <style jsx>{`
+        @keyframes scale-in {
+          from {
+            transform: scale(0.8);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+
+        .animate-scale-in {
+          animation: scale-in 0.3s ease-out;
+        }
+      `}</style>
+    </div>
   );
 }
 

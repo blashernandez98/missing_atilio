@@ -19,6 +19,25 @@ export const defaultAppContext = {
   infoCard: true,
 }
 
+export const solvedAppContext = {
+  toggleFieldMode: () => {},
+  partido: {} as Partido,
+  guesses: guessesDefault as Guesses,
+  setGuesses: (guess: Guesses) => {},
+  currentPlayer: 1,
+  setCurrentPlayer: (player: number) => {},
+  player_name: [] as string[],
+  solved: {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1} as Solved,
+  setSolved: (solved: Solved) => {},
+  toggleInfo: () => {},
+  gameOver: false,
+  toggleGameOver: () => {},
+  instructions: false,
+  toggleInstructions: () => {},
+  infoCard: true,
+  setFormacion: (formacion: string) => {},
+}
+
 export const defaultWordleContext = {
   currentTry: 0,
   setCurrentTry: (tryNumber: number) => {},

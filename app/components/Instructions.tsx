@@ -36,9 +36,14 @@ function Instructions() {
     <Modal isOpen={ instructions } onClose={ toggleInstructions }>
       <div
         ref={ modalContentRef }  // Assign the ref to the scrollable content
-        className='flex flex-col rounded-md items-center relative p-5 max-h-96 md:max-h-[500px] overflow-y-scroll bg-[#1e3c72] text-white'>
-        <button className='absolute top-2 right-2 rounded-full bg-red-500 w-5 h-5 text-white font-bold flex justify-center items-center' onClick={ handleClose }>x</button>
-        <h2 className='text-3xl font-bold text-center my-2'>Como Jugar</h2>
+        className='flex flex-col rounded-xl items-center relative p-6 max-h-96 md:max-h-[500px] overflow-y-scroll bg-[#1e3c72] text-white border border-slate-600 shadow-2xl'>
+        <button
+          className='absolute top-3 right-3 rounded-full bg-slate-700 hover:bg-slate-600 w-8 h-8 text-white font-bold flex justify-center items-center transition-all border border-slate-600 hover:border-slate-500 z-10'
+          onClick={ handleClose }
+        >
+          ✕
+        </button>
+        <h2 className='text-3xl font-bold text-center my-2 mb-4'>Cómo Jugar</h2>
         { tutorialState === 0 && (
           <>
             <p className='text-md text-left my-2'>
@@ -88,7 +93,12 @@ function Instructions() {
             <p className='text-md text-left my-2'>
               <strong>¡Suerte Bolso!</strong>
             </p>
-            <button className='bg-red-500 rounded-md w-20 h-16 text-white font-bold hover:scale-110 transition-all ease-in duration-75' onClick={ handleClose }>JUGAR</button>
+            <button
+              className='bg-blue-600 hover:bg-blue-700 border border-blue-500 hover:border-blue-400 rounded-lg px-6 py-3 text-white font-semibold transition-all duration-200 shadow-lg hover:shadow-xl mt-2'
+              onClick={ handleClose }
+            >
+              ▶️ JUGAR
+            </button>
           </>
         ) }
       </div>

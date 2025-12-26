@@ -120,8 +120,13 @@ function Wordle() {
         currentPlayerName,
       } }
     >
-      <div className='w-full flex justify-center'>
-        <button onClick={ toggleFieldMode } className='bg-gradient-to-r from-rose-600 to-red-500 rounded-md text-center p-2 text-white'>Volver</button>
+      <div className='w-full flex justify-center mb-4'>
+        <button
+          onClick={ toggleFieldMode }
+          className='rounded-lg px-5 py-2.5 mt-2 bg-slate-700/80 hover:bg-slate-600 border border-slate-600 hover:border-slate-500 transition-all duration-200 shadow-lg hover:shadow-xl backdrop-blur-sm text-white font-semibold'
+        >
+          ← Volver a la Cancha
+        </button>
       </div>
       <Board />
       <Keyboard />

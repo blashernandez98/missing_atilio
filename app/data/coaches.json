@@ -1,0 +1,18 @@
+[
+  {
+    "id": 3744,
+    "name": "Hugo De León",
+    "fullName": "De León, Hugo",
+    "photoUrl": "https://elasticbeanstalk-us-east-1-911267631614.s3.amazonaws.com/imagenes/dts/DE%20LEON%20HUGO.jpg",
+    "stats": {
+      "totalMatches": 253,
+      "wins": 147,
+      "draws": 54,
+      "losses": 52,
+      "goalsFor": 482,
+      "goalsAgainst": 277,
+      "winPercentage": 58.1,
+      "championships": 10
+    }
+  }
+]

@@ -7,13 +7,19 @@ export function Board() {
   const { currentPlayer, guesses } = useContext(AppContext);
   const { currentPlayerName } = useContext(WordleContext);
 
+  const nameLength = currentPlayerName.filter(l => l !== ' ').length;
+  const isLongName = nameLength > 8;
+
   return (
-    <div className="flex flex-col w-full items-center justify-center p-10 gap-2">
+    <div className="flex flex-col w-full items-center justify-center p-6 sm:p-10 gap-2">
       { [...Array(5)].map((_, indexRow) => (
-        <div className="flex flex-row w-80 sm:w-[500px] md:w-[600px] justify-center items-center gap-1" key={ indexRow }>
+        <div
+          className="flex flex-row justify-center items-center gap-1 sm:gap-2 max-w-[100vw] overflow-x-auto px-2"
+          key={ indexRow }
+        >
           { currentPlayerName.map((letter, indexLetter) => (
             currentPlayerName[indexLetter] === ' ' ? (
-              <div key={ `${indexRow}:${indexLetter}` } className="w-6 h-6" />
+              <div key={ `${indexRow}:${indexLetter}` } className={ `${isLongName ? 'w-2 sm:w-3' : 'w-3 sm:w-4 md:w-5'}` } />
             ) : (
               <Letter
                 letterPos={ indexLetter }
@@ -26,6 +32,7 @@ export function Board() {
                 correctName={ currentPlayerName }
                 tryRow={ indexRow }
                 key={ `${indexRow}:${indexLetter}` }
+                isLongName={ isLongName }
               />
             )
           )) }

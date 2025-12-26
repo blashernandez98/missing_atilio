@@ -40,26 +40,26 @@ export function Keyboard() {
 
 
   return (
-    <div className="flex flex-col w-full items-center justify-center gap-5 p-2">
-      <div className="grid grid-cols-10 rounded-sm">
+    <div className="md:hidden flex flex-col w-full items-center justify-center gap-3 p-4 bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-600">
+      <div className="grid grid-cols-10 gap-1">
         { keys1.map((key) => {
           let disabledKey = activeLetter(key);
           return <Key key={ `line1_${key}` } keyVal={ key } disabledKey={ disabledKey } />;
         }) }
       </div>
-      <div className="grid grid-cols-9 rounded-sm">
+      <div className="grid grid-cols-9 gap-1">
         { keys2.map((key) => {
           let disabledKey = activeLetter(key);
           return <Key key={ `line2_${key}` } keyVal={ key } disabledKey={ disabledKey } />;
         }) }
       </div>
-      <div className="grid grid-cols-7 rounded-sm place-items-center">
+      <div className="grid grid-cols-7 gap-1 place-items-center">
         { keys3.map((key) => {
           let disabledKey = activeLetter(key);
           return <Key key={ `line2_${key}` } keyVal={ key } disabledKey={ disabledKey } />;
         }) }
       </div>
-      <div className='flex justify center'>
+      <div className='flex justify-center gap-2'>
         <Key keyVal="ENTER" disabledKey={ false } />
         <Key keyVal="DEL" disabledKey={ false } />
       </div>

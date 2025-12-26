@@ -21,12 +21,12 @@ function Key({ keyVal, disabledKey }: KeyProps) {
     }
   };
 
-  const specialKeyClasses = keyVal === "ENTER" || keyVal === "DEL" ? "w-16 h-8 sm:w-20 sm:h-10 p-2" : "w-8 sm:w-12 aspect-square p-1"
-  const disabledClasses = letterStates[keyVal] === 'error' ? ' bg-zinc-400' : '';
+  const specialKeyClasses = keyVal === "ENTER" || keyVal === "DEL" ? "w-16 h-10 px-3 text-xs" : "w-10 aspect-square text-sm"
+  const disabledClasses = letterStates[keyVal] === 'error' ? 'bg-zinc-500/80 opacity-50' : 'bg-slate-700/80 hover:bg-slate-600';
 
   return (
     <div
-      className={ `${letterStates[keyVal]} ${specialKeyClasses} ${disabledClasses} text-sm flex mx-1 justify-center items-center cursor-pointer text-white border-2 border-slate-50` }
+      className={ `${letterStates[keyVal]} ${specialKeyClasses} ${disabledClasses} flex justify-center items-center cursor-pointer text-white font-semibold rounded-lg border border-slate-600 hover:border-slate-500 transition-all duration-150 shadow-md hover:shadow-lg active:scale-95` }
       onClick={ handlekey }
     >
       { keyVal }

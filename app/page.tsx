@@ -1,7 +1,7 @@
-import App from "@/app/components/App";
+import GameModeSelector from "@/app/components/GameModeSelector";
 
 export default function Home() {
   return (
-    <App/>
-  )
+    <GameModeSelector />
+  );
 }
