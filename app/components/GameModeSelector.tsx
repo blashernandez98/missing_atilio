@@ -21,7 +21,7 @@ function GameModeSelector() {
 
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8'>
             {/* Missing Atilio (Wordle) */}
-            <Link href="/wordle" className='h-full'>
+            <Link href="/missing11" className='h-full'>
               <div className='
                 h-full
                 group cursor-pointer
@@ -50,7 +50,7 @@ function GameModeSelector() {
             </Link>
 
             {/* Comparison Game */}
-            <Link href="/comparison" className='h-full'>
+            <Link href="/versus" className='h-full'>
               <div className='
                 h-full
                 group cursor-pointer

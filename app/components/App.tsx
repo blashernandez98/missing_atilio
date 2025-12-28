@@ -53,9 +53,9 @@ function App() {
     fetchCronograma();
   }, []);
 
-  // Select current game based on today's date
+  // Select current game based on today's date (only on first load)
   useEffect(() => {
-    if (cronogramaData.length === 0) return;
+    if (cronogramaData.length === 0 || currentGame) return;
 
     // Get current day in dd-mm-yyyy format
     const today = new Date();
@@ -70,11 +70,11 @@ function App() {
     }
 
     setCurrentGame(game);
-  }, [cronogramaData]);
+  }, [cronogramaData, currentGame]);
 
   // Load partido when currentGame changes
   useEffect(() => {
-    if (!currentGame || partido["equipo"]) return;
+    if (!currentGame) return;
 
     const partidoElegido = partidos_data[currentGame.gameIndex];
     setPartido(partidoElegido);
@@ -85,7 +85,14 @@ function App() {
       .split(", ")[0]
       .split("")
     setPlayerName(playerName);
-  }, [currentPlayer, partido, currentGame]);
+
+    // Reset game state when changing games
+    setGuesses(defaultAppContext.guesses);
+    setSolved(defaultAppContext.solved);
+    setCurrentPlayer(2);
+    setFieldMode(true);
+    setGameOver(false);
+  }, [currentGame]);
 
 
   const toggleFieldMode = () => {
@@ -102,6 +109,33 @@ function App() {
 
   const toggleInstructions = () => {
     setInstructions(!instructions);
+  }
+
+  // Navigate to previous/next game
+  const navigateGame = (direction: 'prev' | 'next') => {
+    if (!currentGame || cronogramaData.length === 0) return;
+
+    const currentIndex = cronogramaData.findIndex(g => g.liveDate === currentGame.liveDate);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= cronogramaData.length) return;
+
+    const newGame = cronogramaData[newIndex];
+
+    // Check if new game is in the future
+    const today = new Date();
+    const todayString = today.toISOString().split("T")[0].split('-').reverse().join('-');
+    const [day, month, year] = newGame.liveDate.split('-');
+    const [todayDay, todayMonth, todayYear] = todayString.split('-');
+
+    const newGameDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    const todayDate = new Date(parseInt(todayYear), parseInt(todayMonth) - 1, parseInt(todayDay));
+
+    // Don't allow navigation to future games
+    if (newGameDate > todayDate) return;
+
+    setCurrentGame(newGame);
   }
 
   return (
@@ -127,7 +161,7 @@ function App() {
       >
         <InfoCard />
         <Instructions />
-        <nav className='flex items-center justify-between py-6 px-5 gap-3 bg-slate-950/30 backdrop-blur-sm border-b border-slate-700/50'>
+        <nav className='flex items-center justify-between py-4 sm:py-6 px-4 sm:px-5 gap-3 bg-slate-950/30 backdrop-blur-sm border-b border-slate-700/50'>
           <Link
             href="/"
             className="text-white/80 hover:text-white transition-colors flex items-center gap-2"
@@ -136,9 +170,47 @@ function App() {
             <span className="hidden sm:inline">Volver</span>
           </Link>
 
-          <div className='flex items-center gap-3'>
-            <h1 className='text-2xl sm:text-3xl font-bold text-slate-50 tracking-tight'>Missing Atilio</h1>
-            <Image src='/atilio_grande.png' alt='Atilio Garcia' width='50' height='50' className='rounded-lg shadow-lg' />
+          <div className='flex flex-col items-center gap-2'>
+            <div className='flex items-center gap-3'>
+              <h1 className='text-2xl sm:text-3xl font-bold text-slate-50 tracking-tight'>Missing Atilio</h1>
+              <Image src='/atilio_grande.png' alt='Atilio Garcia' width='50' height='50' className='rounded-lg shadow-lg' />
+            </div>
+
+            {/* Date Navigation */}
+            {currentGame && (
+              <div className='flex items-center gap-2 sm:gap-3'>
+                <button
+                  onClick={() => navigateGame('prev')}
+                  className='text-white/60 hover:text-white transition-colors text-lg sm:text-xl'
+                  disabled={!cronogramaData.find((g, idx) => idx < cronogramaData.findIndex(game => game.liveDate === currentGame.liveDate))}
+                >
+                  ◀
+                </button>
+                <span className='text-white/80 text-sm sm:text-base font-semibold'>
+                  {currentGame.liveDate}
+                </span>
+                <button
+                  onClick={() => navigateGame('next')}
+                  className='text-white/60 hover:text-white transition-colors text-lg sm:text-xl disabled:opacity-30 disabled:cursor-not-allowed'
+                  disabled={(() => {
+                    const currentIndex = cronogramaData.findIndex(g => g.liveDate === currentGame.liveDate);
+                    if (currentIndex === -1 || currentIndex === cronogramaData.length - 1) return true;
+
+                    const nextGame = cronogramaData[currentIndex + 1];
+                    const today = new Date();
+                    const todayString = today.toISOString().split("T")[0].split('-').reverse().join('-');
+                    const [day, month, year] = nextGame.liveDate.split('-');
+                    const [todayDay, todayMonth, todayYear] = todayString.split('-');
+                    const nextGameDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                    const todayDate = new Date(parseInt(todayYear), parseInt(todayMonth) - 1, parseInt(todayDay));
+
+                    return nextGameDate > todayDate;
+                  })()}
+                >
+                  ▶
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="w-16 sm:w-24" /> {/* Spacer for centering */}

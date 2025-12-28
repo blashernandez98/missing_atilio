@@ -1,21 +1,15 @@
 import { neon } from '@neondatabase/serverless';
 import { Cronograma, CronogramaDB, CronogramaCreate, PlayerSchedule, PlayerScheduleDB, PlayerScheduleCreate } from './types';
 
-// Lazy initialization - only create client when first used
-let sqlClient: ReturnType<typeof neon> | null = null;
-
 const getSql = () => {
-  if (!sqlClient) {
-    const url = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL || '';
-    if (!url) {
-      throw new Error(
-        'DATABASE_URL or NETLIFY_DATABASE_URL environment variable is required. ' +
-        'Make sure you have a .env.local file with DATABASE_URL set.'
-      );
-    }
-    sqlClient = neon(url);
+  const url = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL || '';
+  if (!url) {
+    throw new Error(
+      'DATABASE_URL or NETLIFY_DATABASE_URL environment variable is required. ' +
+      'Make sure you have a .env.local file with DATABASE_URL set.'
+    );
   }
-  return sqlClient;
+  return neon(url);
 };
 
 /**

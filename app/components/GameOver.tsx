@@ -54,7 +54,7 @@ function GameOver() {
       <div
         className="
           bg-gradient-to-br from-slate-800 to-slate-900
-          rounded-2xl p-8 max-w-md w-full
+          rounded-2xl p-6 sm:p-8 max-w-md w-full
           border-2 border-slate-600
           shadow-2xl
           transform transition-all duration-300
@@ -62,19 +62,19 @@ function GameOver() {
         "
       >
         {/* Title */}
-        <h2 className="text-3xl font-bold text-white text-center mb-6">
+        <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-4 sm:mb-6">
           {titulo}
         </h2>
 
         {/* Image */}
         {imagen && (
-          <div className="flex justify-center mb-6">
-            <Image src={imagen} alt="GameOver" width={250} height={250} className="rounded-lg" />
+          <div className="flex justify-center mb-4 sm:mb-6">
+            <Image src={imagen} alt="GameOver" width={250} height={250} className="rounded-lg max-w-full h-auto" />
           </div>
         )}
 
         {/* Stats */}
-        <div className='flex flex-row justify-center gap-8 mb-6'>
+        <div className='flex flex-row justify-center gap-6 sm:gap-8 mb-4 sm:mb-6'>
           <div className='flex flex-col items-center gap-2'>
             <span className='rounded-full bg-cyan-700 w-16 md:w-20 aspect-square text-center text-2xl md:text-4xl font-bold text-white flex justify-center items-center shadow-lg'>
               {solvedPlayers}
@@ -90,16 +90,16 @@ function GameOver() {
         </div>
 
         {/* Message */}
-        <p className='text-white/80 text-center mb-8 leading-relaxed'>
+        <p className='text-white/80 text-center mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base'>
           {descripcion}
         </p>
 
         {/* Buttons */}
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           <Link href="/" className="flex-1">
             <button
               className="
-                w-full px-6 py-3 rounded-xl font-bold
+                w-full px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base
                 bg-slate-700 hover:bg-slate-600
                 text-white shadow-lg
                 transform transition-all duration-200
@@ -113,7 +113,7 @@ function GameOver() {
           <button
             onClick={toggleGameOver}
             className="
-              flex-1 px-6 py-3 rounded-xl font-bold
+              flex-1 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base
               bg-blue-600 hover:bg-blue-500
               text-white shadow-lg
               transform transition-all duration-200
@@ -121,7 +121,7 @@ function GameOver() {
               active:scale-95
             "
           >
-            Jugar de Nuevo
+            Cerrar
           </button>
         </div>
       </div>

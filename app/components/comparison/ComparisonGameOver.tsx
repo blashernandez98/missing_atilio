@@ -63,7 +63,7 @@ function ComparisonGameOver({ streak, bestStreak, onClose }: ComparisonGameOverP
       <div
         className="
           bg-gradient-to-br from-slate-800 to-slate-900
-          rounded-2xl p-8 max-w-md w-full
+          rounded-2xl p-6 sm:p-8 max-w-md w-full
           border-2 border-slate-600
           shadow-2xl
           transform transition-all duration-300
@@ -71,19 +71,19 @@ function ComparisonGameOver({ streak, bestStreak, onClose }: ComparisonGameOverP
         "
       >
         {/* Emoji */}
-        <div className="text-center mb-4">
-          <span className="text-7xl">{message.emoji}</span>
+        <div className="text-center mb-3 sm:mb-4">
+          <span className="text-5xl sm:text-6xl md:text-7xl">{message.emoji}</span>
         </div>
 
         {/* Title */}
-        <h2 className="text-4xl font-bold text-white text-center mb-4">
+        <h2 className="text-3xl sm:text-4xl font-bold text-white text-center mb-3 sm:mb-4">
           {message.title}
         </h2>
 
         {/* Streak */}
-        <div className="text-center mb-4">
+        <div className="text-center mb-3 sm:mb-4">
           <p className="text-white/70 text-sm mb-2">Racha</p>
-          <p className="text-5xl font-bold text-cyan-300 mb-2">
+          <p className="text-4xl sm:text-5xl font-bold text-cyan-300 mb-2">
             {streak}
           </p>
           {isNewRecord && (
@@ -99,16 +99,16 @@ function ComparisonGameOver({ streak, bestStreak, onClose }: ComparisonGameOverP
         </div>
 
         {/* Message */}
-        <p className="text-white/80 text-center mb-8 leading-relaxed">
+        <p className="text-white/80 text-center mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base">
           {message.message}
         </p>
 
         {/* Buttons */}
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           <Link href="/" className="flex-1">
             <button
               className="
-                w-full px-6 py-3 rounded-xl font-bold
+                w-full px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base
                 bg-slate-700 hover:bg-slate-600
                 text-white shadow-lg
                 transform transition-all duration-200
@@ -122,7 +122,7 @@ function ComparisonGameOver({ streak, bestStreak, onClose }: ComparisonGameOverP
           <button
             onClick={onClose}
             className="
-              flex-1 px-6 py-3 rounded-xl font-bold
+              flex-1 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base
               bg-blue-600 hover:bg-blue-500
               text-white shadow-lg
               transform transition-all duration-200

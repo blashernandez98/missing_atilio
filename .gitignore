@@ -17,6 +17,8 @@ node_modules/
 # Scraping progress (temporary files)
 app/data/scrape-progress.json
 app/data/players-test.json
+app/data/filtered-ids.json
+app/data/missing-ids.json
 
 # Scraping scrips
 scripts/

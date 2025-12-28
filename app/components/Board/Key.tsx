@@ -21,7 +21,7 @@ function Key({ keyVal, disabledKey }: KeyProps) {
     }
   };
 
-  const specialKeyClasses = keyVal === "ENTER" || keyVal === "DEL" ? "w-16 h-10 px-3 text-xs" : "w-10 aspect-square text-sm"
+  const specialKeyClasses = keyVal === "ENTER" || keyVal === "DEL" ? "w-12 sm:w-14 md:w-16 h-8 sm:h-9 md:h-10 px-2 sm:px-3 text-xs" : "w-7 sm:w-8 md:w-10 aspect-square text-xs sm:text-sm"
   const disabledClasses = letterStates[keyVal] === 'error' ? 'bg-zinc-500/80 opacity-50' : 'bg-slate-700/80 hover:bg-slate-600';
 
   return (

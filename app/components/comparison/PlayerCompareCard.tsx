@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import type { Player, ComparisonStat } from '@/lib/types';
 import { useState, useEffect } from 'react';
+import { formatPlayerNameWithNickname } from '@/lib/utils';
 
 interface PlayerCompareCardProps {
   player: Player;
@@ -45,15 +46,15 @@ function PlayerCompareCard({
   return (
     <div
       className={`
-        relative flex flex-col items-center w-full md:w-80 lg:w-96
+        relative flex flex-col items-center w-full sm:w-72 md:w-80 min-h-[500px]
         bg-gradient-to-br from-slate-800/90 to-slate-900/90
-        backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-slate-600/50
+        backdrop-blur-sm rounded-2xl p-4 sm:p-5 md:p-6 shadow-2xl border border-slate-600/50
         transition-all duration-300
         ${animateReveal ? 'scale-105' : 'scale-100'}
       `}
     >
       {/* Player Photo */}
-      <div className="relative w-40 h-48 mb-4 rounded-lg overflow-hidden border-4 border-slate-600 shadow-lg bg-slate-700">
+      <div className="relative w-32 h-40 sm:w-36 sm:h-44 md:w-40 md:h-48 mb-3 sm:mb-4 rounded-lg overflow-hidden border-4 border-slate-600 shadow-lg bg-slate-700">
         {!imageLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-700 animate-pulse p-4">
             <Image
@@ -82,9 +83,16 @@ function PlayerCompareCard({
       </div>
 
       {/* Player Name */}
-      <h2 className="text-2xl font-bold text-white mb-4 text-center">
-        {player.fullName}
-      </h2>
+      <div className="mb-3 sm:mb-4 text-center min-h-[60px] flex flex-col justify-center">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">
+          {player.name}
+        </h2>
+        {player.nickname && (
+          <p className="text-sm text-slate-400 mt-1">
+            &quot;{player.nickname}&quot;
+          </p>
+        )}
+      </div>
 
       {/* Stat Display */}
       <div className="w-full">
@@ -95,7 +103,7 @@ function PlayerCompareCard({
             </p>
             <div
               className={`
-                text-4xl font-bold text-cyan-300 p-4 rounded-xl
+                text-2xl sm:text-3xl md:text-4xl font-bold text-cyan-300 p-3 sm:p-4 rounded-xl
                 bg-slate-700/50 border border-slate-600
                 ${animateReveal ? 'animate-pulse' : ''}
               `}
@@ -114,11 +122,11 @@ function PlayerCompareCard({
 
             {/* Guess Buttons */}
             {showButtons && onGuess && (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2 sm:gap-3">
                 <button
                   onClick={() => onGuess(true)}
                   className="
-                    px-6 py-4 rounded-xl font-bold text-lg
+                    px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg
                     bg-green-600 hover:bg-green-500
                     text-white shadow-lg
                     transform transition-all duration-200
@@ -131,7 +139,7 @@ function PlayerCompareCard({
                 <button
                   onClick={() => onGuess(false)}
                   className="
-                    px-6 py-4 rounded-xl font-bold text-lg
+                    px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg
                     bg-red-600 hover:bg-red-500
                     text-white shadow-lg
                     transform transition-all duration-200

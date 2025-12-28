@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import type { Player } from '@/lib/types';
+import { normalizeString } from '@/lib/utils';
 
 interface PlayerAutocompleteProps {
   players: Player[];
@@ -10,22 +11,34 @@ interface PlayerAutocompleteProps {
   excludePlayerIds?: number[];
 }
 
-function PlayerAutocomplete({ players, onSelectPlayer, disabled, excludePlayerIds = [] }: PlayerAutocompleteProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+export interface PlayerAutocompleteRef {
+  focus: () => void;
+}
+
+const PlayerAutocomplete = forwardRef<PlayerAutocompleteRef, PlayerAutocompleteProps>(
+  ({ players, onSelectPlayer, disabled, excludePlayerIds = [] }, ref) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+    const [highlightedIndex, setHighlightedIndex] = useState(0);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Expose focus method to parent
+    useImperativeHandle(ref, () => ({
+      focus: () => {
+        inputRef.current?.focus();
+      },
+    }));
 
   // Filter players based on search term (minimum 3 characters)
   const filteredPlayers = searchTerm.length >= 3
     ? players
         .filter(player => !excludePlayerIds.includes(player.id))
         .filter(player => {
-          const searchLower = searchTerm.toLowerCase();
+          const searchNormalized = normalizeString(searchTerm);
           return (
-            player.fullName.toLowerCase().includes(searchLower) ||
-            player.name.toLowerCase().includes(searchLower)
+            normalizeString(player.fullName).includes(searchNormalized) ||
+            normalizeString(player.name).includes(searchNormalized)
           );
         })
         .slice(0, 10) // Limit to 10 results
@@ -143,7 +156,7 @@ function PlayerAutocomplete({ players, onSelectPlayer, disabled, excludePlayerId
                 ${index !== filteredPlayers.length - 1 ? 'border-b border-slate-700' : ''}
               `}
             >
-              <div className="font-semibold">{player.fullName}</div>
+              <div className="font-semibold">{player.name}</div>
             </button>
           ))}
         </div>
@@ -166,6 +179,8 @@ function PlayerAutocomplete({ players, onSelectPlayer, disabled, excludePlayerId
       )}
     </div>
   );
-}
+});
+
+PlayerAutocomplete.displayName = 'PlayerAutocomplete';
 
 export default PlayerAutocomplete;

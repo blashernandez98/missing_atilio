@@ -7,7 +7,7 @@ export default function ComparisonPage() {
   return (
     <div className="relative bg-gradient-to-r from-[#1e3c72] to-[#2a5298] min-h-screen flex flex-col">
       {/* Header */}
-      <nav className='flex items-center justify-between py-4 px-5 bg-slate-950/30 backdrop-blur-sm border-b border-slate-700/50'>
+      <nav className='flex items-center justify-between py-4 sm:py-6 px-4 sm:px-5 bg-slate-950/30 backdrop-blur-sm border-b border-slate-700/50'>
         <Link
           href="/"
           className="text-white/80 hover:text-white transition-colors flex items-center gap-2"
@@ -29,7 +29,7 @@ export default function ComparisonPage() {
           />
         </div>
 
-        <div className="w-16" /> {/* Spacer for centering */}
+        <div className="w-16 sm:w-24" /> {/* Spacer for centering */}
       </nav>
 
       {/* Game */}

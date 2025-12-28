@@ -226,15 +226,13 @@ function ComparisonGame() {
         <p className="text-white text-xl font-bold">
           Racha: <span className="text-cyan-300">{gameState.currentStreak}</span>
         </p>
-        {gameState.bestStreak > 0 && (
-          <p className="text-white/70 text-sm mt-1">
-            Mejor racha: {gameState.bestStreak}
-          </p>
-        )}
+        <p className="text-white/70 text-sm mt-1">
+          Mejor racha: {gameState.bestStreak}
+        </p>
       </div>
 
       {/* Players Comparison */}
-      <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start justify-center w-full max-w-6xl mx-auto">
+      <div className="flex flex-col md:flex-row gap-4 sm:gap-6 md:gap-8 items-center justify-center w-full max-w-6xl mx-auto">
         {/* Player A - Revealed */}
         <PlayerCompareCard
           player={gameState.playerA}
@@ -245,9 +243,9 @@ function ComparisonGame() {
         />
 
         {/* VS Divider */}
-        <div className="flex items-center justify-center">
-          <div className="w-16 h-16 rounded-full bg-slate-700/80 flex items-center justify-center border-2 border-slate-500">
-            <span className="text-white font-bold text-xl">VS</span>
+        <div className="flex items-center justify-center self-center">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-slate-700/80 flex items-center justify-center border-2 border-slate-500">
+            <span className="text-white font-bold text-lg sm:text-xl">VS</span>
           </div>
         </div>
 

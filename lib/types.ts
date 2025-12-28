@@ -1,3 +1,5 @@
+import type { PositionCategory } from './position-mappings';
+
 export interface Partido {
   equipo: { [key: string]: string }
   resultado: string
@@ -62,13 +64,21 @@ export interface Player {
   id: number
   name: string
   fullName: string
+  nickname?: string
   birthDate?: string
   birthCity?: string
   country?: string
   position?: string
+  positionCategory?: PositionCategory
   photoUrl?: string
   debutYear?: number
   originClub?: string
+  debutGameId?: number
+  officialDebutGameId?: number
+  lastGameId?: number
+  lastOfficialGameId?: number
+  rivalGoals?: Array<{ rival: string; goals: number }>
+  goalsByTournament?: Array<{ tournament: string; goals: number }>
   stats: {
     totalMatches: number
     wins: number
@@ -79,6 +89,10 @@ export interface Player {
     penaltyGoals: number
     minutesPlayed: number
     officialTitles: number
+    officialInternationalTitles?: number
+    officialNationalTitles?: number
+    friendlyInternationalTitles?: number
+    friendlyNationalTitles?: number
   }
 }
 
@@ -127,6 +141,7 @@ export interface PlayerGuess {
     totalGoals: ComparisonResult
     originClub: ComparisonResult
     officialTitles: ComparisonResult
+    positionCategory: ComparisonResult
   }
 }
 
@@ -136,4 +151,5 @@ export interface GuessThePlayerGameState {
   gameOver: boolean
   won: boolean
   maxGuesses: number
+  hasGivenUp?: boolean
 }

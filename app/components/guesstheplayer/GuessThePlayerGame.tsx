@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Player, GuessThePlayerGameState, PlayerGuess, ComparisonResult } from '@/lib/types';
-import PlayerAutocomplete from './PlayerAutocomplete';
+import PlayerAutocomplete, { PlayerAutocompleteRef } from './PlayerAutocomplete';
 import GuessResult from './GuessResult';
 import GuessGameOver from './GuessGameOver';
 import playersData from '@/app/data/players.json';
@@ -13,6 +13,7 @@ interface GuessThePlayerGameProps {
 
 function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
   const players: Player[] = playersData as Player[];
+  const autocompleteRef = useRef<PlayerAutocompleteRef>(null);
 
   const [gameState, setGameState] = useState<GuessThePlayerGameState>({
     targetPlayer: null,
@@ -130,6 +131,7 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
       totalGoals: compareValues(guessedPlayer.stats.totalGoals, gameState.targetPlayer.stats.totalGoals, true),
       originClub: compareValues(guessedPlayer.originClub, gameState.targetPlayer.originClub, false),
       officialTitles: compareValues(guessedPlayer.stats.officialTitles, gameState.targetPlayer.stats.officialTitles, true),
+      positionCategory: compareValues(guessedPlayer.positionCategory, gameState.targetPlayer.positionCategory, false),
     };
 
     const newGuess: PlayerGuess = {
@@ -139,13 +141,29 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
 
     const newGuesses = [...gameState.guesses, newGuess];
     const isWin = guessedPlayer.id === gameState.targetPlayer.id;
-    const isGameOver = isWin || newGuesses.length >= gameState.maxGuesses;
+    const isGameOver = isWin;
 
     setGameState({
       ...gameState,
       guesses: newGuesses,
       gameOver: isGameOver,
       won: isWin,
+    });
+
+    // Auto-focus the input after submitting a guess (if not game over)
+    if (!isGameOver) {
+      setTimeout(() => {
+        autocompleteRef.current?.focus();
+      }, 100);
+    }
+  };
+
+  const handleGiveUp = () => {
+    setGameState({
+      ...gameState,
+      gameOver: true,
+      won: false,
+      hasGivenUp: true,
     });
   };
 
@@ -160,6 +178,7 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
       gameOver: false,
       won: false,
       maxGuesses: 5,
+      hasGivenUp: false,
     });
   };
 
@@ -172,73 +191,58 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
   }
 
   const guessedPlayerIds = gameState.guesses.map(g => g.player.id);
-  const remainingGuesses = gameState.maxGuesses - gameState.guesses.length;
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6">
-      <div className="text-center mb-6">
-        <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-          Adivina el Jugador
-        </h1>
-        <p className="text-slate-300 text-lg">
-          Tienes {remainingGuesses} {remainingGuesses === 1 ? 'intento' : 'intentos'} restante{remainingGuesses !== 1 ? 's' : ''}
-        </p>
-      </div>
+      {/* Game Over Card at Top with Animation */}
+      {gameState.gameOver && (
+        <div className="animate-slide-down">
+          <GuessGameOver
+            player={gameState.targetPlayer}
+            won={gameState.won}
+            guessCount={gameState.guesses.length}
+            maxGuesses={gameState.maxGuesses}
+            onPlayAgain={resetGame}
+          />
+        </div>
+      )}
 
       {!gameState.gameOver && (
-        <div className="mb-8">
+        <div className="mb-8 space-y-3">
           <PlayerAutocomplete
+            ref={autocompleteRef}
             players={players}
             onSelectPlayer={handleGuess}
             excludePlayerIds={guessedPlayerIds}
             disabled={gameState.gameOver}
           />
+          <div className="text-center">
+            <button
+              onClick={handleGiveUp}
+              disabled={gameState.guesses.length < 3}
+              className={`px-6 py-2 rounded-lg font-semibold border-2 transition-colors ${
+                gameState.guesses.length < 3
+                  ? 'bg-slate-700/20 text-slate-500 border-slate-600/50 cursor-not-allowed'
+                  : 'bg-red-600/20 hover:bg-red-600/30 text-red-300 border-red-600/50'
+              }`}
+            >
+              Rendirse
+            </button>
+          </div>
         </div>
       )}
 
       {gameState.guesses.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-white mb-4">Tus intentos:</h2>
-          <div className="space-y-3">
+          <h2 className="text-xl font-bold text-white mb-4">
+            Tus intentos:
+          </h2>
+          <div className="space-y-2">
+            {/* Show all guesses in reverse order */}
             {[...gameState.guesses].reverse().map((guess, reverseIndex) => {
               const originalIndex = gameState.guesses.length - 1 - reverseIndex;
               return <GuessResult key={originalIndex} guess={guess} index={originalIndex} />;
             })}
-          </div>
-        </div>
-      )}
-
-      {gameState.gameOver && (
-        <GuessGameOver
-          player={gameState.targetPlayer}
-          won={gameState.won}
-          guessCount={gameState.guesses.length}
-          maxGuesses={gameState.maxGuesses}
-          onPlayAgain={resetGame}
-        />
-      )}
-
-      {/* Legend */}
-      {gameState.guesses.length > 0 && !gameState.gameOver && (
-        <div className="mt-8 bg-slate-800/30 rounded-lg p-4 border border-slate-700/50">
-          <h3 className="text-sm font-bold text-slate-300 mb-2">Leyenda:</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-slate-400">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">✓</span>
-              <span>Exacto</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg">⬆️</span>
-              <span>Mayor</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg">⬇️</span>
-              <span>Menor</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg">❌</span>
-              <span>Diferente</span>
-            </div>
           </div>
         </div>
       )}

@@ -36,14 +36,14 @@ function Instructions() {
     <Modal isOpen={ instructions } onClose={ toggleInstructions }>
       <div
         ref={ modalContentRef }  // Assign the ref to the scrollable content
-        className='flex flex-col rounded-xl items-center relative p-6 max-h-96 md:max-h-[500px] overflow-y-scroll bg-[#1e3c72] text-white border border-slate-600 shadow-2xl'>
+        className='flex flex-col rounded-xl items-center relative p-5 sm:p-6 max-h-96 md:max-h-[500px] overflow-y-scroll bg-[#1e3c72] text-white border border-slate-600 shadow-2xl'>
         <button
           className='absolute top-3 right-3 rounded-full bg-slate-700 hover:bg-slate-600 w-8 h-8 text-white font-bold flex justify-center items-center transition-all border border-slate-600 hover:border-slate-500 z-10'
           onClick={ handleClose }
         >
           ✕
         </button>
-        <h2 className='text-3xl font-bold text-center my-2 mb-4'>Cómo Jugar</h2>
+        <h2 className='text-2xl sm:text-3xl font-bold text-center my-2 mb-4'>Cómo Jugar</h2>
         { tutorialState === 0 && (
           <>
             <p className='text-md text-left my-2'>
@@ -71,11 +71,11 @@ function Instructions() {
               <br />
               Podés escribir con el teclado (en computadora) o con un teclado debajo de la grilla (en celular).
             </p>
-            <Image src='/board.png' alt='Grilla de intentos' width='200' height='400' />
+            <Image src='/board.png' alt='Grilla de intentos' width='200' height='400' className='max-w-full h-auto' />
             <p className='text-md text-left my-2'>
               Cuando termines de escribir tu intento, hace click en el botón <strong>Enviar</strong> o apreta <strong>enter</strong>.
             </p>
-            <Image src='/board2.png' alt='Grilla de intentos' width='300' height='100' />
+            <Image src='/board2.png' alt='Grilla de intentos' width='300' height='100' className='max-w-full h-auto' />
             <p className='text-md text-left my-2'>
               Una vez que envies tu intento, cada casilla se pintará de un color distinto:
             </p>
@@ -94,7 +94,7 @@ function Instructions() {
               <strong>¡Suerte Bolso!</strong>
             </p>
             <button
-              className='bg-blue-600 hover:bg-blue-700 border border-blue-500 hover:border-blue-400 rounded-lg px-6 py-3 text-white font-semibold transition-all duration-200 shadow-lg hover:shadow-xl mt-2'
+              className='bg-blue-600 hover:bg-blue-700 border border-blue-500 hover:border-blue-400 rounded-lg px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base text-white font-semibold transition-all duration-200 shadow-lg hover:shadow-xl mt-2'
               onClick={ handleClose }
             >
               ▶️ JUGAR
