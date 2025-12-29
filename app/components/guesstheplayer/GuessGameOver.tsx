@@ -31,12 +31,12 @@ function GuessGameOver({ player, won, guessCount, maxGuesses, onPlayAgain }: Gue
       <div className={`
         bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 md:p-8
         border-4 shadow-2xl
-        ${won ? 'border-yellow-500 shadow-yellow-500/20' : 'border-slate-600'}
+        ${won ? 'border-green-500 shadow-green-500/20' : 'border-slate-600'}
       `}>
         {/* Header */}
         <div className="text-center mb-4">
-          <h2 className={`text-2xl md:text-3xl font-bold mb-2 ${won ? 'text-yellow-400' : 'text-red-400'}`}>
-            {won ? '¡Felicitaciones! 🎉' : 'Juego Terminado'}
+          <h2 className={`text-2xl md:text-3xl font-bold mb-2 ${won ? 'text-green-400' : 'text-red-400'}`}>
+            {won ? 'Ganaste' : 'Juego Terminado'}
           </h2>
           {won && (
             <p className="text-slate-300">

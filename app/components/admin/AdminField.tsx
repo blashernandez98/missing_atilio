@@ -23,13 +23,15 @@ interface AdminPlayerProps {
 function AdminPlayer({ position, locationX, locationY, playerName, isSelected, onClick }: AdminPlayerProps) {
   const location_classes = `col-start-${locationX} row-start-${locationY}`;
 
-  // Get last name only (remove first name after comma)
-  const lastName = playerName
+  // Parse player name - format is "LastName, FirstName"
+  const nameParts = playerName.split(', ');
+  const lastName = nameParts[0]
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-    .split(', ')[0];
+    .trim();
+
+  const firstName = nameParts.length > 1 ? nameParts[1].trim() : '';
 
   const letterCount = lastName.replace(/\s/g, '').length;
 
@@ -56,9 +58,16 @@ function AdminPlayer({ position, locationX, locationY, playerName, isSelected, o
         </span>
       </div>
 
-      <span className={`text-xs md:text-sm mt-2 font-semibold text-center ${isSelected ? 'text-cyan-300' : 'text-slate-50'}`}>
-        {lastName.toUpperCase()}
-      </span>
+      <div className="flex flex-col items-center mt-2">
+        <span className={`text-xs md:text-sm font-semibold text-center ${isSelected ? 'text-cyan-300' : 'text-slate-50'}`}>
+          {lastName.toUpperCase()}
+        </span>
+        {firstName && (
+          <span className={`text-[10px] md:text-xs text-center ${isSelected ? 'text-cyan-400/80' : 'text-slate-300/70'}`}>
+            {firstName}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

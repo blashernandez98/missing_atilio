@@ -17,6 +17,7 @@ export const defaultAppContext = {
   instructions: false,
   toggleInstructions: () => {},
   infoCard: true,
+  clearCurrentGameProgress: () => {},
 }
 
 export const solvedAppContext = {
@@ -36,6 +37,7 @@ export const solvedAppContext = {
   toggleInstructions: () => {},
   infoCard: true,
   setFormacion: (formacion: string) => {},
+  clearCurrentGameProgress: () => {},
 }
 
 export const defaultWordleContext = {

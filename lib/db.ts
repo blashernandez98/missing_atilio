@@ -28,7 +28,7 @@ export async function getCronogramaAll(): Promise<Cronograma[]> {
         created_at,
         updated_at
       FROM cronograma
-      ORDER BY live_date ASC
+      ORDER BY TO_DATE(live_date, 'DD-MM-YYYY') ASC
     ` as any[];
 
     return results.map((row: any) => ({
@@ -58,7 +58,7 @@ export async function getCronogramaAllWithMetadata(): Promise<CronogramaDB[]> {
         created_at,
         updated_at
       FROM cronograma
-      ORDER BY live_date ASC
+      ORDER BY TO_DATE(live_date, 'DD-MM-YYYY') ASC
     ` as any[];
 
     return results as CronogramaDB[];
@@ -233,6 +233,8 @@ export async function getNextAvailableDate(): Promise<string> {
     const results = await sql`
       SELECT live_date
       FROM cronograma
+      ORDER BY TO_DATE(live_date, 'DD-MM-YYYY') DESC
+      LIMIT 1
     ` as any[];
 
     if (results.length === 0) {
@@ -242,15 +244,10 @@ export async function getNextAvailableDate(): Promise<string> {
       return formatDateToDDMMYYYY(tomorrow);
     }
 
-    // Parse all dates, sort them, and get the last one
-    const dates = results
-      .map(r => ({ dateStr: r.live_date, dateObj: parseDDMMYYYYToDate(r.live_date) }))
-      .sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime()); // Sort descending
-
-    // Get the latest date and add 1 day
-    const lastDate = new Date(dates[0].dateObj);
-    lastDate.setDate(lastDate.getDate() + 1);
-    return formatDateToDDMMYYYY(lastDate);
+    // Parse the last scheduled date and add 1 day
+    const lastScheduledDate = parseDDMMYYYYToDate(results[0].live_date);
+    lastScheduledDate.setDate(lastScheduledDate.getDate() + 1);
+    return formatDateToDDMMYYYY(lastScheduledDate);
   } catch (error) {
     console.error('Error getting next available date:', error);
     throw error;
@@ -321,7 +318,7 @@ export async function getPlayerScheduleAll(): Promise<PlayerSchedule[]> {
         created_at,
         updated_at
       FROM player_schedule
-      ORDER BY live_date ASC
+      ORDER BY TO_DATE(live_date, 'DD-MM-YYYY') ASC
     ` as any[];
 
     return results.map((row: any) => ({
@@ -349,7 +346,7 @@ export async function getPlayerScheduleAllWithMetadata(): Promise<PlayerSchedule
         created_at,
         updated_at
       FROM player_schedule
-      ORDER BY live_date ASC
+      ORDER BY TO_DATE(live_date, 'DD-MM-YYYY') ASC
     ` as any[];
 
     return results as PlayerScheduleDB[];
@@ -516,6 +513,8 @@ export async function getNextAvailableDateForPlayerSchedule(): Promise<string> {
     const results = await sql`
       SELECT live_date
       FROM player_schedule
+      ORDER BY TO_DATE(live_date, 'DD-MM-YYYY') DESC
+      LIMIT 1
     ` as any[];
 
     if (results.length === 0) {
@@ -525,15 +524,10 @@ export async function getNextAvailableDateForPlayerSchedule(): Promise<string> {
       return formatDateToDDMMYYYY(tomorrow);
     }
 
-    // Parse all dates, sort them, and get the last one
-    const dates = results
-      .map(r => ({ dateStr: r.live_date, dateObj: parseDDMMYYYYToDate(r.live_date) }))
-      .sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime()); // Sort descending
-
-    // Get the latest date and add 1 day
-    const lastDate = new Date(dates[0].dateObj);
-    lastDate.setDate(lastDate.getDate() + 1);
-    return formatDateToDDMMYYYY(lastDate);
+    // Parse the last scheduled date and add 1 day
+    const lastScheduledDate = parseDDMMYYYYToDate(results[0].live_date);
+    lastScheduledDate.setDate(lastScheduledDate.getDate() + 1);
+    return formatDateToDDMMYYYY(lastScheduledDate);
   } catch (error) {
     console.error('Error getting next available date for player schedule:', error);
     throw error;

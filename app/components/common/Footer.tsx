@@ -1,6 +1,6 @@
 export default function Footer() {
   return (
-    <footer className='w-full flex flex-col items-center justify-center gap-2 py-6 px-4 bg-slate-950/20 border-t border-slate-700/30 mt-auto'>
+    <footer className='w-full flex flex-col items-center justify-center gap-2 py-2 px-4 mt-auto'>
       <p className='text-xs md:text-sm text-slate-300 text-center'>
         Gracias a los datos de{' '}
         <a

@@ -31,9 +31,47 @@ function ComparisonGame() {
   const [manualPlayerId, setManualPlayerId] = useState<string>('');
   const [showDevTools, setShowDevTools] = useState(false);
 
-  // Initialize game
+  // Load streaks from localStorage on mount
   useEffect(() => {
-    startNewGame();
+    const savedBestStreak = localStorage.getItem('versus_bestStreak');
+    const savedCurrentStreak = localStorage.getItem('versus_currentStreak');
+
+    if (savedBestStreak || savedCurrentStreak) {
+      try {
+        const bestStreak = savedBestStreak ? parseInt(savedBestStreak) : 0;
+        const currentStreak = savedCurrentStreak ? parseInt(savedCurrentStreak) : 0;
+
+        setGameState(prev => ({
+          ...prev,
+          bestStreak: bestStreak,
+          currentStreak: currentStreak,
+        }));
+      } catch (error) {
+        console.error('Error loading streaks:', error);
+      }
+    }
+  }, []);
+
+  // Save streaks to localStorage whenever they change
+  useEffect(() => {
+    if (gameState.bestStreak > 0) {
+      localStorage.setItem('versus_bestStreak', gameState.bestStreak.toString());
+    }
+    // Always save current streak (even if 0, to persist game state)
+    localStorage.setItem('versus_currentStreak', gameState.currentStreak.toString());
+  }, [gameState.bestStreak, gameState.currentStreak]);
+
+  // Initialize game (only if no players loaded yet)
+  useEffect(() => {
+    if (!gameState.playerA || !gameState.playerB) {
+      const { playerA, playerB, stat } = getValidPlayerPair();
+      setGameState(prev => ({
+        ...prev,
+        playerA,
+        playerB,
+        currentStat: stat,
+      }));
+    }
   }, []);
 
   const getRandomPlayer = (excludeId?: number): Player => {

@@ -28,18 +28,21 @@ function App() {
   const [infoCard, setInfoCard] = useState(true);
   const [gameOver, setGameOver] = useState(false);
   const [instructions, setInstructions] = useState(false);
-  const [cronogramaData, setCronogramaData] = useState<Cronograma[]>(cronograma_fallback);
+  const [cronogramaData, setCronogramaData] = useState<Cronograma[]>([]);
   const [currentGame, setCurrentGame] = useState<Cronograma | null>(null);
 
   // Fetch cronograma from API on mount
   useEffect(() => {
     const fetchCronograma = async () => {
       try {
+        console.log('🔄 Fetching cronograma from API...');
         const res = await fetch('/api/cronograma');
+        console.log('📡 Response status:', res.status);
+
         if (res.ok) {
           const data = await res.json();
+          console.log('✅ Cronograma loaded from API:', data.length, 'games');
           setCronogramaData(data);
-          console.log('✅ Cronograma loaded from API');
         } else {
           console.warn('⚠️ API failed, using fallback cronograma.json');
           setCronogramaData(cronograma_fallback);
@@ -57,16 +60,37 @@ function App() {
   useEffect(() => {
     if (cronogramaData.length === 0 || currentGame) return;
 
-    // Get current day in dd-mm-yyyy format
+    // Get current day in dd-mm-yyyy format (using local time, not UTC)
     const today = new Date();
-    const todayString = today.toISOString().split("T")[0].split('-').reverse().join('-');
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    const todayString = `${day}-${month}-${year}`;
+
+    console.log('🔍 Buscando partido para hoy:', todayString);
+    console.log('📋 Partidos disponibles:', cronogramaData.map(g => g.liveDate));
 
     // Find game for today
     let game = cronogramaData.find(g => g.liveDate === todayString);
     if (!game) {
-      console.error("No hay partido programado para hoy");
-      game = cronogramaData[0];
-      console.log("Selecciono partido: ", game);
+      console.warn("⚠️ No hay partido programado para hoy, buscando el más reciente");
+
+      // Find the most recent game that is <= today
+      const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      const pastGames = cronogramaData.filter(g => {
+        const [day, month, year] = g.liveDate.split('-').map(Number);
+        const gameDate = new Date(year, month - 1, day);
+        return gameDate <= todayDate;
+      });
+
+      console.log('📅 Partidos pasados encontrados:', pastGames.map(g => g.liveDate));
+
+      // Take the last one (most recent) since they're sorted ASC
+      game = pastGames.length > 0 ? pastGames[pastGames.length - 1] : cronogramaData[0];
+      console.log("✅ Seleccionado partido más reciente: ", game?.liveDate);
+    } else {
+      console.log("✅ Partido encontrado para hoy:", game.liveDate);
     }
 
     setCurrentGame(game);
@@ -86,13 +110,50 @@ function App() {
       .split("")
     setPlayerName(playerName);
 
-    // Reset game state when changing games
-    setGuesses(defaultAppContext.guesses);
-    setSolved(defaultAppContext.solved);
-    setCurrentPlayer(2);
-    setFieldMode(true);
-    setGameOver(false);
+    // Try to load saved game state from localStorage
+    const savedState = localStorage.getItem(`missing11_${currentGame.liveDate}`);
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        setGuesses(parsed.guesses || defaultAppContext.guesses);
+        setSolved(parsed.solved || defaultAppContext.solved);
+        setCurrentPlayer(parsed.currentPlayer || 2);
+        setFieldMode(parsed.fieldMode !== undefined ? parsed.fieldMode : true);
+        setGameOver(parsed.gameOver || false);
+        console.log('✅ Loaded saved game state for', currentGame.liveDate);
+      } catch (error) {
+        console.error('Error loading saved game state:', error);
+        // Reset to default on error
+        setGuesses(defaultAppContext.guesses);
+        setSolved(defaultAppContext.solved);
+        setCurrentPlayer(2);
+        setFieldMode(true);
+        setGameOver(false);
+      }
+    } else {
+      // No saved state, reset to default
+      setGuesses(defaultAppContext.guesses);
+      setSolved(defaultAppContext.solved);
+      setCurrentPlayer(2);
+      setFieldMode(true);
+      setGameOver(false);
+    }
   }, [currentGame]);
+
+  // Save game state to localStorage whenever it changes
+  useEffect(() => {
+    if (!currentGame) return;
+
+    const gameState = {
+      guesses,
+      solved,
+      currentPlayer,
+      fieldMode,
+      gameOver,
+    };
+
+    localStorage.setItem(`missing11_${currentGame.liveDate}`, JSON.stringify(gameState));
+  }, [currentGame, guesses, solved, currentPlayer, fieldMode, gameOver]);
 
 
   const toggleFieldMode = () => {
@@ -111,6 +172,21 @@ function App() {
     setInstructions(!instructions);
   }
 
+  // Clear progress for current game
+  const clearCurrentGameProgress = () => {
+    if (!currentGame) return;
+
+    // Clear localStorage for this game
+    localStorage.removeItem(`missing11_${currentGame.liveDate}`);
+
+    // Reset state to default
+    setGuesses(defaultAppContext.guesses);
+    setSolved(defaultAppContext.solved);
+    setCurrentPlayer(2);
+    setFieldMode(true);
+    setGameOver(false);
+  };
+
   // Navigate to previous/next game
   const navigateGame = (direction: 'prev' | 'next') => {
     if (!currentGame || cronogramaData.length === 0) return;
@@ -123,19 +199,18 @@ function App() {
 
     const newGame = cronogramaData[newIndex];
 
-    // Check if new game is in the future
+    // Check if new game is in the future (using local time)
     const today = new Date();
-    const todayString = today.toISOString().split("T")[0].split('-').reverse().join('-');
-    const [day, month, year] = newGame.liveDate.split('-');
-    const [todayDay, todayMonth, todayYear] = todayString.split('-');
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-    const newGameDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    const todayDate = new Date(parseInt(todayYear), parseInt(todayMonth) - 1, parseInt(todayDay));
+    const [day, month, year] = newGame.liveDate.split('-').map(Number);
+    const newGameDate = new Date(year, month - 1, day);
 
     // Don't allow navigation to future games
     if (newGameDate > todayDate) return;
 
     setCurrentGame(newGame);
+    setInfoCard(true); // Show info modal when navigating to a different game
   }
 
   return (
@@ -157,6 +232,7 @@ function App() {
           instructions,
           toggleInstructions,
           infoCard,
+          clearCurrentGameProgress,
         } }
       >
         <InfoCard />
@@ -181,8 +257,8 @@ function App() {
               <div className='flex items-center gap-2 sm:gap-3'>
                 <button
                   onClick={() => navigateGame('prev')}
-                  className='text-white/60 hover:text-white transition-colors text-lg sm:text-xl'
-                  disabled={!cronogramaData.find((g, idx) => idx < cronogramaData.findIndex(game => game.liveDate === currentGame.liveDate))}
+                  className='text-white/60 hover:text-white transition-colors text-lg sm:text-xl disabled:opacity-30 disabled:cursor-not-allowed'
+                  disabled={cronogramaData.findIndex(g => g.liveDate === currentGame.liveDate) === 0}
                 >
                   ◀
                 </button>
@@ -198,11 +274,10 @@ function App() {
 
                     const nextGame = cronogramaData[currentIndex + 1];
                     const today = new Date();
-                    const todayString = today.toISOString().split("T")[0].split('-').reverse().join('-');
-                    const [day, month, year] = nextGame.liveDate.split('-');
-                    const [todayDay, todayMonth, todayYear] = todayString.split('-');
-                    const nextGameDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                    const todayDate = new Date(parseInt(todayYear), parseInt(todayMonth) - 1, parseInt(todayDay));
+                    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+                    const [day, month, year] = nextGame.liveDate.split('-').map(Number);
+                    const nextGameDate = new Date(year, month - 1, day);
 
                     return nextGameDate > todayDate;
                   })()}

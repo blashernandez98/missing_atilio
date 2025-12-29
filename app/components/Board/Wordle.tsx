@@ -29,12 +29,23 @@ function Wordle() {
     letterHints(guesses[currentPlayer][currentTry]);
   }, [currentPlayer]);
 
-  const currentPlayerName = partido["equipo"] ? partido["equipo"][currentPlayer].toLowerCase()
+  // Parse full player name to get first name and last name separately
+  const fullPlayerName = partido["equipo"] ? partido["equipo"][currentPlayer] : "Atilio, García";
+  const nameParts = fullPlayerName.split(", ");
+  const lastName = nameParts[0];
+  const firstName = nameParts.length > 1 ? nameParts[1] : "";
+
+  const currentPlayerName = lastName
+    .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
-    .split(", ")[0]
-    .split("") : ['a', 't', 'i', 'l', 'i', 'o'];
+    .split("");
+
+  // Check if player is solved or failed
+  const isSolved = solved[currentPlayer] > 0 && solved[currentPlayer] < 6;
+  const isFailed = solved[currentPlayer] === 6;
+  const isCompleted = isSolved || isFailed;
 
   const onEnter = () => {
     if (currentLetter != currentPlayerName.length) return;
@@ -129,6 +140,16 @@ function Wordle() {
         </button>
       </div>
       <Board />
+      {isCompleted && firstName && (
+        <div className='w-full flex justify-center mt-2 mb-4'>
+          <div className='bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-lg px-4 py-2 shadow-md'>
+            <p className='text-slate-300 text-sm'>
+              <span className='font-semibold text-slate-200'>Nombre: </span>
+              <span className='text-cyan-300'>{firstName}</span>
+            </p>
+          </div>
+        </div>
+      )}
       <Keyboard />
     </WordleContext.Provider>
   );

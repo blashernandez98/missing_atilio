@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface ComparisonGameOverProps {
   streak: number;
@@ -11,45 +12,45 @@ interface ComparisonGameOverProps {
 interface GameOverMessage {
   title: string;
   message: string;
-  emoji: string;
+  image: string;
 }
 
 function getGameOverMessage(streak: number): GameOverMessage {
   if (streak === 0) {
     return {
-      title: '¡Ups!',
-      message: '¡Fallaste en el primer intento! Pero no te desanimes, probá de nuevo.',
-      emoji: '😅',
+      title: 'Ah pero que desastre...',
+      message: '',
+      image: '/GameOver/1.jpg',
     };
   } else if (streak >= 1 && streak <= 3) {
     return {
-      title: '¡Buen intento!',
-      message: 'Estás empezando a conocer a los jugadores tricolores. ¡Seguí practicando!',
-      emoji: '👍',
+      title: 'Normal',
+      message: '',
+      image: '/GameOver/2.jpg',
     };
   } else if (streak >= 4 && streak <= 7) {
     return {
-      title: '¡Muy bien!',
-      message: '¡Ya vas conociendo bastante sobre los jugadores de Nacional!',
-      emoji: '⚽',
+      title: 'Bastante decente',
+      message: 'Algo sabés pibe',
+      image: '/GameOver/4.jpg',
     };
   } else if (streak >= 8 && streak <= 12) {
     return {
-      title: '¡Excelente!',
-      message: '¡Sos un verdadero conocedor de la historia tricolor!',
-      emoji: '🏆',
+      title: 'Bolso de ley',
+      message: 'Bien metida manito. ¿Te estuviste juntando mucho con Hernán?',
+      image: '/GameOver/5.jpg',
     };
   } else if (streak >= 13 && streak <= 20) {
     return {
-      title: '¡Increíble!',
-      message: '¡Tenés un conocimiento impresionante sobre Nacional!',
-      emoji: '🔥',
+      title: '¡Heredero de Prudencio!',
+      message: '',
+      image: '/GameOver/6.png',
     };
   } else {
     return {
-      title: '¡LEYENDA!',
-      message: '¡Sos una verdadera enciclopedia tricolor! Tu conocimiento es extraordinario.',
-      emoji: '👑',
+      title: '¡LEYENDA TRICOLOR!',
+      message: '¡Sos la verdadera enciclopedia bolso! Manda mail a la comisión de historia que te contratan.',
+      image: '/GameOver/6.png',
     };
   }
 }
@@ -70,33 +71,41 @@ function ComparisonGameOver({ streak, bestStreak, onClose }: ComparisonGameOverP
           animate-scale-in
         "
       >
-        {/* Emoji */}
-        <div className="text-center mb-3 sm:mb-4">
-          <span className="text-5xl sm:text-6xl md:text-7xl">{message.emoji}</span>
-        </div>
-
         {/* Title */}
-        <h2 className="text-3xl sm:text-4xl font-bold text-white text-center mb-3 sm:mb-4">
+        <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-4 sm:mb-6">
           {message.title}
         </h2>
 
+        {/* Image */}
+        {message.image && (
+          <div className="flex justify-center mb-4 sm:mb-6">
+            <Image src={message.image} alt="GameOver" width={250} height={250} className="rounded-lg max-w-full h-auto" />
+          </div>
+        )}
+
         {/* Streak */}
-        <div className="text-center mb-3 sm:mb-4">
-          <p className="text-white/70 text-sm mb-2">Racha</p>
-          <p className="text-4xl sm:text-5xl font-bold text-cyan-300 mb-2">
-            {streak}
-          </p>
-          {isNewRecord && (
-            <p className="text-green-400 font-semibold text-sm animate-pulse">
-              ¡NUEVO RÉCORD! 🎉
-            </p>
-          )}
-          {!isNewRecord && bestStreak > streak && (
-            <p className="text-white/50 text-sm">
-              Mejor racha: {bestStreak}
-            </p>
+        <div className="flex flex-row justify-center gap-6 sm:gap-8 mb-4 sm:mb-6">
+          <div className="flex flex-col items-center gap-2">
+            <span className="rounded-full bg-cyan-700 w-16 md:w-20 aspect-square text-center text-2xl md:text-4xl font-bold text-white flex justify-center items-center shadow-lg">
+              {streak}
+            </span>
+            <p className="text-center text-xs text-white/70">Racha</p>
+          </div>
+          {bestStreak > 0 && (
+            <div className="flex flex-col items-center gap-2">
+              <span className="rounded-full bg-cyan-700 w-16 md:w-20 aspect-square text-center text-2xl md:text-4xl font-bold text-white flex justify-center items-center shadow-lg">
+                {bestStreak}
+              </span>
+              <p className="text-center text-xs text-white/70">Mejor Racha</p>
+            </div>
           )}
         </div>
+
+        {isNewRecord && (
+          <p className="text-green-400 font-semibold text-center mb-4 animate-pulse">
+            ¡NUEVO RÉCORD! 🎉
+          </p>
+        )}
 
         {/* Message */}
         <p className="text-white/80 text-center mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base">
