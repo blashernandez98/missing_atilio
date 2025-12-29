@@ -6,7 +6,7 @@ import { AppContext } from "@/app/components/App";
 
 export function Keyboard() {
   const keys1 = ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"];
-  const keys2 = ["A", "S", "D", "F", "G", "H", "J", "K", "L"];
+  const keys2 = ["A", "S", "D", "F", "G", "H", "J", "K", "L", "Ñ"];
   const keys3 = ["Z", "X", "C", "V", "B", "N", "M"];
 
   const { onDelete, onEnter, selectLetter, currentPlayerName } = useContext(WordleContext);
@@ -40,14 +40,14 @@ export function Keyboard() {
 
 
   return (
-    <div className="flex flex-col w-full items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 bg-slate-800/50 backdrop-blur-sm rounded-lg sm:rounded-xl border border-slate-600">
+    <div className="flex flex-col w-full items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 backdrop-blur-sm rounded-lg sm:rounded-xl border border-slate-600">
       <div className="grid grid-cols-10 gap-1 sm:gap-1.5 md:gap-2">
         { keys1.map((key) => {
           let disabledKey = activeLetter(key);
           return <Key key={ `line1_${key}` } keyVal={ key } disabledKey={ disabledKey } />;
         }) }
       </div>
-      <div className="grid grid-cols-9 gap-1 sm:gap-1.5 md:gap-2">
+      <div className="grid grid-cols-10 gap-1 sm:gap-1.5 md:gap-2">
         { keys2.map((key) => {
           let disabledKey = activeLetter(key);
           return <Key key={ `line2_${key}` } keyVal={ key } disabledKey={ disabledKey } />;

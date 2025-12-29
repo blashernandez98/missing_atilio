@@ -2,9 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-html,
+html {
+    overflow-y: scroll;
+}
+
 body {
     margin: 0;
     padding: 0;
-    overflow-y: scroll;
 }

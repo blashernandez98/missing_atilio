@@ -152,4 +152,6 @@ export interface GuessThePlayerGameState {
   won: boolean
   maxGuesses: number
   hasGivenUp?: boolean
+  isScheduledPlayer?: boolean
+  todayDate?: string
 }

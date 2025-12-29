@@ -27,26 +27,44 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
   useEffect(() => {
     const initializeGame = async () => {
       let targetPlayer: Player | null = null;
+      let isScheduledPlayer = false;
+
+      // Get today's date in dd-mm-yyyy format
+      const today = new Date();
+      const day = String(today.getDate()).padStart(2, '0');
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const year = today.getFullYear();
+      const todayString = `${day}-${month}-${year}`;
 
       if (playerId !== undefined) {
         // Use provided player ID
         targetPlayer = players.find(p => p.id === playerId) || null;
       } else {
-        // Try to fetch scheduled player for today
-        try {
-          const response = await fetch('/api/player-schedule/today');
-          if (response.ok) {
-            const schedule = await response.json();
-            targetPlayer = players.find(p => p.id === schedule.playerId) || null;
+        // Check if today's scheduled player has already been solved
+        const solvedToday = localStorage.getItem(`guessPlayer_solved_${todayString}`);
+
+        if (!solvedToday) {
+          // Try to fetch scheduled player for today
+          try {
+            const response = await fetch('/api/player-schedule/today');
+            if (response.ok) {
+              const schedule = await response.json();
+              targetPlayer = players.find(p => p.id === schedule.playerId) || null;
+              isScheduledPlayer = true;
+              console.log('✅ Loaded scheduled player for today');
+            }
+          } catch (error) {
+            console.log('No scheduled player for today, using random player');
           }
-        } catch (error) {
-          console.log('No scheduled player for today, using random player');
+        } else {
+          console.log('✅ Today\'s scheduled player already solved, using random player');
         }
 
-        // Fallback to random player if no scheduled player
+        // Fallback to random player if no scheduled player or already solved
         if (!targetPlayer) {
           const randomIndex = Math.floor(Math.random() * players.length);
           targetPlayer = players[randomIndex];
+          console.log('Using random player');
         }
       }
 
@@ -56,6 +74,8 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
         guesses: [],
         gameOver: false,
         won: false,
+        isScheduledPlayer,
+        todayDate: todayString,
       }));
     };
 
@@ -143,6 +163,12 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
     const isWin = guessedPlayer.id === gameState.targetPlayer.id;
     const isGameOver = isWin;
 
+    // If it's a scheduled player and game is over, mark as solved in localStorage
+    if (isGameOver && gameState.isScheduledPlayer && gameState.todayDate) {
+      localStorage.setItem(`guessPlayer_solved_${gameState.todayDate}`, 'true');
+      console.log('✅ Marked scheduled player as solved for today');
+    }
+
     setGameState({
       ...gameState,
       guesses: newGuesses,
@@ -159,6 +185,12 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
   };
 
   const handleGiveUp = () => {
+    // If it's a scheduled player, mark as solved in localStorage
+    if (gameState.isScheduledPlayer && gameState.todayDate) {
+      localStorage.setItem(`guessPlayer_solved_${gameState.todayDate}`, 'true');
+      console.log('✅ Marked scheduled player as solved (gave up) for today');
+    }
+
     setGameState({
       ...gameState,
       gameOver: true,

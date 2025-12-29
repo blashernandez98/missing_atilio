@@ -22,3 +22,6 @@ app/data/missing-ids.json
 
 # Scraping scrips
 scripts/
+
+# Documentation (private - for Claude Code)
+docs/
