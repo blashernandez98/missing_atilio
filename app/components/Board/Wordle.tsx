@@ -4,6 +4,7 @@ import { Keyboard } from "@/app/components/Board/Keyboard";
 import { AppContext } from "@/app/components/App";
 import { letterStatesDefault } from "@/lib/Words";
 import { defaultWordleContext } from '@/lib/Context';
+import { normalizeString } from '@/lib/utils';
 
 export const WordleContext = createContext(defaultWordleContext);
 
@@ -35,10 +36,7 @@ function Wordle() {
   const lastName = nameParts[0];
   const firstName = nameParts.length > 1 ? nameParts[1] : "";
 
-  const currentPlayerName = lastName
-    .toLowerCase()
-    .trim()
-    .split("");
+  const currentPlayerName = normalizeString(lastName.trim()).split("");
 
   // Check if player is solved or failed
   const isSolved = solved[currentPlayer] > 0 && solved[currentPlayer] < 6;

@@ -36,7 +36,7 @@ function Instructions() {
     <Modal isOpen={ instructions } onClose={ toggleInstructions }>
       <div
         ref={ modalContentRef }  // Assign the ref to the scrollable content
-        className='flex flex-col rounded-xl items-center relative p-5 sm:p-6 max-h-96 md:max-h-[500px] overflow-y-scroll bg-[#1e3c72] text-white border border-slate-600 shadow-2xl'>
+        className='flex flex-col rounded-xl items-center relative p-5 sm:p-6 max-h-[600px] md:max-h-[700px] overflow-y-scroll bg-[#1e3c72] text-white border border-slate-600 shadow-2xl'>
         <button
           className='absolute top-3 right-3 rounded-full bg-slate-700 hover:bg-slate-600 w-8 h-8 text-white font-bold flex justify-center items-center transition-all border border-slate-600 hover:border-slate-500 z-10'
           onClick={ handleClose }
@@ -88,7 +88,7 @@ function Instructions() {
               <strong>Ojito con esto</strong>, arriba tenemos una <strong>O</strong> verde en la 6ta letra y una amarilla en la 2da letra. Esto <strong>no implica que necesariamente haya otra O</strong> en el nombre.
             </p>
             <p className='text-md text-left my-2'>
-              La última es que si un jugador tiene una <strong>Ñ</strong>, tenes que poner una <strong>N</strong>. Mala mía.
+              Los nombres están normalizados: no necesitas tildes (á = a, é = e, etc.), pero sí la <strong>Ñ</strong> si el jugador la tiene.
             </p>
             <p className='text-md text-left my-2'>
               <strong>¡Suerte Bolso!</strong>

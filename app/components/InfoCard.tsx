@@ -41,7 +41,7 @@ function InfoCard() {
             >
               ✕
             </button>
-            <h3 className='text-xl sm:text-2xl font-bold mt-3 sm:mt-4'>vs. { partido["rival"] }</h3>
+            <h3 className='text-xl sm:text-2xl font-bold mt-8 sm:mt-4 pr-8'>vs. { partido["rival"] }</h3>
             <p className='text-sm sm:text-md text-slate-300'>{ partido["fecha"] }</p>
             <h2 className='text-3xl sm:text-4xl font-bold text-slate-50'>{ partido["resultado"] }</h2>
             <p className='text-center text-sm sm:text-base text-slate-200'>{ partido["estadio"] }</p>

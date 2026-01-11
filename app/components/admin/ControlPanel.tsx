@@ -17,6 +17,7 @@ interface ControlPanelProps {
   schedules: CronogramaDB[];
   onDeleteSchedule: (id: number) => void;
   isSaving: boolean;
+  allMatches: Partido[];
 }
 
 function ControlPanel({
@@ -30,7 +31,8 @@ function ControlPanel({
   onSave,
   schedules,
   onDeleteSchedule,
-  isSaving
+  isSaving,
+  allMatches
 }: ControlPanelProps) {
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [dateFilterStart, setDateFilterStart] = useState('');
@@ -160,28 +162,36 @@ function ControlPanel({
           </p>
         ) : (
           <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
-            {schedules.map((schedule) => (
-              <div
-                key={schedule.id}
-                className="flex justify-between items-center bg-slate-700 rounded p-2 text-sm"
-              >
-                <div className="flex flex-col">
-                  <span className="text-slate-50 font-semibold">
-                    {schedule.live_date}
-                  </span>
-                  <span className="text-slate-400 text-xs">
-                    {schedule.formation} | Partido #{schedule.game_index}
-                  </span>
-                </div>
-                <button
-                  onClick={() => onDeleteSchedule(schedule.id)}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded text-xs transition-all"
-                  title="Eliminar"
+            {[...schedules].reverse().map((schedule) => {
+              const match = allMatches[schedule.game_index];
+              return (
+                <div
+                  key={schedule.id}
+                  className="flex justify-between items-center bg-slate-700 rounded p-2 text-sm"
                 >
-                  🗑️
-                </button>
-              </div>
-            ))}
+                  <div className="flex flex-col">
+                    <span className="text-slate-50 font-semibold">
+                      {schedule.live_date}
+                    </span>
+                    {match && (
+                      <span className="text-slate-300 text-xs">
+                        vs. {match.rival} ({match.fecha})
+                      </span>
+                    )}
+                    <span className="text-slate-400 text-xs">
+                      {schedule.formation} | Partido #{schedule.game_index}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => onDeleteSchedule(schedule.id)}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded text-xs transition-all"
+                    title="Eliminar"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

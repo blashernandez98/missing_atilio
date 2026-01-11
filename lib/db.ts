@@ -233,8 +233,6 @@ export async function getNextAvailableDate(): Promise<string> {
     const results = await sql`
       SELECT live_date
       FROM cronograma
-      ORDER BY TO_DATE(live_date, 'DD-MM-YYYY') DESC
-      LIMIT 1
     ` as any[];
 
     if (results.length === 0) {
@@ -244,10 +242,13 @@ export async function getNextAvailableDate(): Promise<string> {
       return formatDateToDDMMYYYY(tomorrow);
     }
 
-    // Parse the last scheduled date and add 1 day
-    const lastScheduledDate = parseDDMMYYYYToDate(results[0].live_date);
-    lastScheduledDate.setDate(lastScheduledDate.getDate() + 1);
-    return formatDateToDDMMYYYY(lastScheduledDate);
+    // Parse all dates and find the maximum
+    const dates = results.map(row => parseDDMMYYYYToDate(row.live_date));
+    const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+
+    // Add 1 day to the maximum date
+    maxDate.setDate(maxDate.getDate() + 1);
+    return formatDateToDDMMYYYY(maxDate);
   } catch (error) {
     console.error('Error getting next available date:', error);
     throw error;
@@ -513,8 +514,6 @@ export async function getNextAvailableDateForPlayerSchedule(): Promise<string> {
     const results = await sql`
       SELECT live_date
       FROM player_schedule
-      ORDER BY TO_DATE(live_date, 'DD-MM-YYYY') DESC
-      LIMIT 1
     ` as any[];
 
     if (results.length === 0) {
@@ -524,10 +523,13 @@ export async function getNextAvailableDateForPlayerSchedule(): Promise<string> {
       return formatDateToDDMMYYYY(tomorrow);
     }
 
-    // Parse the last scheduled date and add 1 day
-    const lastScheduledDate = parseDDMMYYYYToDate(results[0].live_date);
-    lastScheduledDate.setDate(lastScheduledDate.getDate() + 1);
-    return formatDateToDDMMYYYY(lastScheduledDate);
+    // Parse all dates and find the maximum
+    const dates = results.map(row => parseDDMMYYYYToDate(row.live_date));
+    const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+
+    // Add 1 day to the maximum date
+    maxDate.setDate(maxDate.getDate() + 1);
+    return formatDateToDDMMYYYY(maxDate);
   } catch (error) {
     console.error('Error getting next available date for player schedule:', error);
     throw error;

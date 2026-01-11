@@ -176,8 +176,9 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
       won: isWin,
     });
 
-    // Auto-focus the input after submitting a guess (if not game over)
-    if (!isGameOver) {
+    // Auto-focus the input after submitting a guess (if not game over and on larger screens)
+    // Don't auto-focus on mobile to avoid keyboard covering the clues
+    if (!isGameOver && window.innerWidth >= 640) {
       setTimeout(() => {
         autocompleteRef.current?.focus();
       }, 100);

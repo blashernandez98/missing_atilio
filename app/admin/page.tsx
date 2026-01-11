@@ -31,10 +31,40 @@ export default function AdminPage() {
   // Fetch schedules on mount
   useEffect(() => {
     fetchSchedules();
-    fetchNextAvailableDate();
     fetchPlayerSchedules();
-    fetchNextAvailableDateForPlayer();
   }, []);
+
+  // Helper function to parse dates in dd-mm-yyyy format (for schedules)
+  const parseDateDashes = (dateString: string): Date => {
+    const [day, month, year] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  // Helper function to format Date to dd-mm-yyyy
+  const formatDate = (date: Date): string => {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  // Calculate next available date from schedules array
+  const calculateNextAvailableDate = (schedulesList: CronogramaDB[]) => {
+    if (schedulesList.length === 0) {
+      // No schedules, return tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return formatDate(tomorrow);
+    }
+
+    // Parse all dates and find the maximum
+    const dates = schedulesList.map(schedule => parseDateDashes(schedule.live_date));
+    const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+
+    // Add 1 day to the maximum date
+    maxDate.setDate(maxDate.getDate() + 1);
+    return formatDate(maxDate);
+  };
 
   const fetchSchedules = async () => {
     try {
@@ -42,25 +72,13 @@ export default function AdminPage() {
       if (res.ok) {
         const data = await res.json();
         setSchedules(data);
+        // Calculate next available date from the fetched schedules
+        setScheduleDate(calculateNextAvailableDate(data));
       } else {
         console.error('Failed to fetch schedules');
       }
     } catch (error) {
       console.error('Error fetching schedules:', error);
-    }
-  };
-
-  const fetchNextAvailableDate = async () => {
-    try {
-      const res = await fetch('/api/cronograma/next-available-date');
-      if (res.ok) {
-        const data = await res.json();
-        setScheduleDate(data.nextAvailableDate);
-      } else {
-        console.error('Failed to fetch next available date');
-      }
-    } catch (error) {
-      console.error('Error fetching next available date:', error);
     }
   };
 
@@ -131,9 +149,8 @@ export default function AdminPage() {
 
       if (res.ok) {
         alert('✅ Partido programado exitosamente!');
-        // Refresh schedules and get next available date
+        // Refresh schedules (which will recalculate next available date)
         await fetchSchedules();
-        await fetchNextAvailableDate();
         // Clear selection
         setSelectedMatch(null);
         setSelectedGameIndex(null);
@@ -162,7 +179,6 @@ export default function AdminPage() {
       if (res.ok) {
         alert('✅ Partido eliminado exitosamente!');
         await fetchSchedules();
-        await fetchNextAvailableDate();
       } else {
         alert('❌ Error al eliminar el partido');
       }
@@ -173,31 +189,36 @@ export default function AdminPage() {
   };
 
   // Player scheduling functions
+  const calculateNextAvailableDateForPlayer = (schedulesList: PlayerScheduleDB[]) => {
+    if (schedulesList.length === 0) {
+      // No schedules, return tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return formatDate(tomorrow);
+    }
+
+    // Parse all dates and find the maximum
+    const dates = schedulesList.map(schedule => parseDateDashes(schedule.live_date));
+    const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+
+    // Add 1 day to the maximum date
+    maxDate.setDate(maxDate.getDate() + 1);
+    return formatDate(maxDate);
+  };
+
   const fetchPlayerSchedules = async () => {
     try {
       const res = await fetch('/api/player-schedule?includeMetadata=true');
       if (res.ok) {
         const data = await res.json();
         setPlayerSchedules(data);
+        // Calculate next available date from the fetched schedules
+        setPlayerScheduleDate(calculateNextAvailableDateForPlayer(data));
       } else {
         console.error('Failed to fetch player schedules');
       }
     } catch (error) {
       console.error('Error fetching player schedules:', error);
-    }
-  };
-
-  const fetchNextAvailableDateForPlayer = async () => {
-    try {
-      const res = await fetch('/api/player-schedule/next-available-date');
-      if (res.ok) {
-        const data = await res.json();
-        setPlayerScheduleDate(data.nextAvailableDate);
-      } else {
-        console.error('Failed to fetch next available date for player');
-      }
-    } catch (error) {
-      console.error('Error fetching next available date for player:', error);
     }
   };
 
@@ -229,7 +250,6 @@ export default function AdminPage() {
       if (res.ok) {
         alert('✅ Jugador programado exitosamente!');
         await fetchPlayerSchedules();
-        await fetchNextAvailableDateForPlayer();
         setSelectedPlayer(null);
       } else {
         const error = await res.json();
@@ -256,7 +276,6 @@ export default function AdminPage() {
       if (res.ok) {
         alert('✅ Jugador eliminado exitosamente!');
         await fetchPlayerSchedules();
-        await fetchNextAvailableDateForPlayer();
       } else {
         alert('❌ Error al eliminar el jugador');
       }
@@ -266,7 +285,7 @@ export default function AdminPage() {
     }
   };
 
-  // Helper function to parse dates in dd/mm/yyyy format
+  // Helper function to parse dates in dd/mm/yyyy format (for partidos.json)
   const parseDate = (dateString: string): Date => {
     const [day, month, year] = dateString.split('/').map(Number);
     return new Date(year, month - 1, day);
@@ -322,6 +341,7 @@ export default function AdminPage() {
                 schedules={schedules}
                 onDeleteSchedule={handleDeleteSchedule}
                 isSaving={isSaving}
+                allMatches={partidos}
               />
             </div>
           </div>
@@ -389,7 +409,7 @@ export default function AdminPage() {
                   <p className="text-slate-400 text-sm">No hay jugadores programados aún.</p>
                 ) : (
                   <div className="space-y-2">
-                    {playerSchedules.map((schedule) => {
+                    {[...playerSchedules].reverse().map((schedule) => {
                       const player = players.find(p => p.id === schedule.player_id);
                       return (
                         <div

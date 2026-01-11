@@ -13,6 +13,7 @@ import data from "@/app/data/partidos.json";
 import cronograma from "@/app/data/cronograma.json";
 import Image from 'next/image';
 import Link from 'next/link';
+import { normalizeString } from '@/lib/utils';
 export const AppContext = createContext(defaultAppContext);
 
 const partidos_data = data as Partido[];
@@ -102,12 +103,10 @@ function App() {
 
     const partidoElegido = partidos_data[currentGame.gameIndex];
     setPartido(partidoElegido);
-    const playerName = partidoElegido["equipo"][currentPlayer].toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
+    const playerLastName = partidoElegido["equipo"][currentPlayer]
       .trim()
-      .split(", ")[0]
-      .split("")
+      .split(", ")[0]; // Get last name
+    const playerName = normalizeString(playerLastName).split("");
     setPlayerName(playerName);
 
     // Try to load saved game state from localStorage

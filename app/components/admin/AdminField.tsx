@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { Formaciones, Formation } from '@/lib/Football';
 import { Partido } from '@/lib/types';
+import { normalizeString } from '@/lib/utils';
 
 interface AdminFieldProps {
   match: Partido | null;
@@ -25,11 +26,7 @@ function AdminPlayer({ position, locationX, locationY, playerName, isSelected, o
 
   // Parse player name - format is "LastName, FirstName"
   const nameParts = playerName.split(', ');
-  const lastName = nameParts[0]
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim();
+  const lastName = normalizeString(nameParts[0].trim());
 
   const firstName = nameParts.length > 1 ? nameParts[1].trim() : '';
 

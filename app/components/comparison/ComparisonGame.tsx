@@ -31,35 +31,62 @@ function ComparisonGame() {
   const [manualPlayerId, setManualPlayerId] = useState<string>('');
   const [showDevTools, setShowDevTools] = useState(false);
 
-  // Load streaks from localStorage on mount
+  // Load game state from localStorage on mount
   useEffect(() => {
-    const savedBestStreak = localStorage.getItem('versus_bestStreak');
-    const savedCurrentStreak = localStorage.getItem('versus_currentStreak');
+    const savedGameState = localStorage.getItem('versus_gameState');
 
-    if (savedBestStreak || savedCurrentStreak) {
+    // Migrate from old storage format if it exists
+    const oldBestStreak = localStorage.getItem('versus_bestStreak');
+    const oldCurrentStreak = localStorage.getItem('versus_currentStreak');
+    if (oldBestStreak || oldCurrentStreak) {
+      // Only migrate best streak, reset current streak (can't restore without players)
+      setGameState(prev => ({
+        ...prev,
+        bestStreak: oldBestStreak ? parseInt(oldBestStreak) : 0,
+      }));
+      // Clean up old keys
+      localStorage.removeItem('versus_bestStreak');
+      localStorage.removeItem('versus_currentStreak');
+      return; // Don't load from new format if migrating
+    }
+
+    if (savedGameState) {
       try {
-        const bestStreak = savedBestStreak ? parseInt(savedBestStreak) : 0;
-        const currentStreak = savedCurrentStreak ? parseInt(savedCurrentStreak) : 0;
+        const parsed = JSON.parse(savedGameState);
+
+        // Validate that saved players still exist in data
+        const playerA = parsed.playerA ? players.find(p => p.id === parsed.playerA.id) : null;
+        const playerB = parsed.playerB ? players.find(p => p.id === parsed.playerB.id) : null;
 
         setGameState(prev => ({
           ...prev,
-          bestStreak: bestStreak,
-          currentStreak: currentStreak,
+          bestStreak: parsed.bestStreak || 0,
+          currentStreak: parsed.currentStreak || 0,
+          // Only restore players if they still exist (prevents cheating via refresh)
+          playerA: playerA || prev.playerA,
+          playerB: playerB || prev.playerB,
+          currentStat: parsed.currentStat || prev.currentStat,
         }));
       } catch (error) {
-        console.error('Error loading streaks:', error);
+        console.error('Error loading game state:', error);
       }
     }
   }, []);
 
-  // Save streaks to localStorage whenever they change
+  // Save complete game state to localStorage whenever it changes
   useEffect(() => {
-    if (gameState.bestStreak > 0) {
-      localStorage.setItem('versus_bestStreak', gameState.bestStreak.toString());
+    // Only save if we have both players (game is initialized)
+    if (gameState.playerA && gameState.playerB) {
+      const stateToSave = {
+        bestStreak: gameState.bestStreak,
+        currentStreak: gameState.currentStreak,
+        playerA: gameState.playerA,
+        playerB: gameState.playerB,
+        currentStat: gameState.currentStat,
+      };
+      localStorage.setItem('versus_gameState', JSON.stringify(stateToSave));
     }
-    // Always save current streak (even if 0, to persist game state)
-    localStorage.setItem('versus_currentStreak', gameState.currentStreak.toString());
-  }, [gameState.bestStreak, gameState.currentStreak]);
+  }, [gameState.bestStreak, gameState.currentStreak, gameState.playerA, gameState.playerB, gameState.currentStat]);
 
   // Initialize game (only if no players loaded yet)
   useEffect(() => {
@@ -212,6 +239,7 @@ function ComparisonGame() {
   const endGame = () => {
     setGameState({
       ...gameState,
+      currentStreak: 0, // Reset streak immediately on wrong answer
       gameOver: true,
     });
   };
@@ -229,7 +257,7 @@ function ComparisonGame() {
   }
 
   return (
-    <div className="flex flex-col p-4 pt-8">
+    <div className="flex flex-col p-2 sm:p-4 pt-4 sm:pt-8 min-h-screen">
       {/* Dev Tools */}
       {process.env.NODE_ENV === 'development' && (
         <div className="mb-4 text-center">
@@ -260,17 +288,17 @@ function ComparisonGame() {
       )}
 
       {/* Streak Display */}
-      <div className="mb-8 text-center">
-        <p className="text-white text-xl font-bold">
+      <div className="mb-3 sm:mb-6 md:mb-8 text-center">
+        <p className="text-white text-lg sm:text-xl font-bold">
           Racha: <span className="text-cyan-300">{gameState.currentStreak}</span>
         </p>
-        <p className="text-white/70 text-sm mt-1">
+        <p className="text-white/70 text-xs sm:text-sm mt-0.5 sm:mt-1">
           Mejor racha: {gameState.bestStreak}
         </p>
       </div>
 
       {/* Players Comparison */}
-      <div className="flex flex-col md:flex-row gap-4 sm:gap-6 md:gap-8 items-center justify-center w-full max-w-6xl mx-auto">
+      <div className="flex flex-col md:flex-row gap-2 sm:gap-4 md:gap-8 items-center justify-center w-full max-w-6xl mx-auto">
         {/* Player A - Revealed */}
         <PlayerCompareCard
           player={gameState.playerA}
@@ -281,9 +309,9 @@ function ComparisonGame() {
         />
 
         {/* VS Divider */}
-        <div className="flex items-center justify-center self-center">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-slate-700/80 flex items-center justify-center border-2 border-slate-500">
-            <span className="text-white font-bold text-lg sm:text-xl">VS</span>
+        <div className="flex items-center justify-center self-center my-1 sm:my-0">
+          <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-slate-700/80 flex items-center justify-center border-2 border-slate-500">
+            <span className="text-white font-bold text-base sm:text-lg md:text-xl">VS</span>
           </div>
         </div>
 

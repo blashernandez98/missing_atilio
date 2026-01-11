@@ -1,15 +1,20 @@
 import type { Player } from './types';
 
 /**
- * Normalize a string by removing accents/diacritics
- * Useful for accent-insensitive search
- * Example: "José" -> "jose"
+ * Normalize a string by removing accents/diacritics BUT preserving Ñ/ñ
+ * Useful for accent-insensitive search while keeping Spanish ñ
+ * Example: "José" -> "jose", but "Peña" -> "peña"
  */
 export const normalizeString = (str: string): string => {
   return str
     .toLowerCase()
-    .normalize('NFD') // Decompose accented characters
-    .replace(/[\u0300-\u036f]/g, ''); // Remove diacritics
+    // Replace accented vowels explicitly to preserve ñ
+    .replace(/á/g, 'a')
+    .replace(/é/g, 'e')
+    .replace(/í/g, 'i')
+    .replace(/ó/g, 'o')
+    .replace(/ú/g, 'u')
+    .replace(/ü/g, 'u');
 };
 
 /**

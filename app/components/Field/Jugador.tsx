@@ -2,6 +2,7 @@ import React, { useContext, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { AppContext } from "@/app/components/App";
 import Image from 'next/image';
+import { normalizeString } from '@/lib/utils';
 
 interface JugadorProps {
   position: number;
@@ -19,16 +20,11 @@ function Jugador({ position, locationX, locationY }: JugadorProps) {
     useContext(AppContext);
 
   // Memoize player name processing to avoid recalculations
-  const { currentPlayerName, lengthString } = useMemo(() => {
-    const playerName = partido["equipo"]
-      ? partido["equipo"][position]
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .trim()
-          .split(", ")[0]
-          .split("")
-      : ['a', 't', 'i', 'l', 'i', 'o'];
+  const { currentPlayerName, lengthString, firstName } = useMemo(() => {
+    const fullPlayerData = partido["equipo"] ? partido["equipo"][position].trim() : "Atilio, Garcia";
+    const [lastName, firstNameRaw] = fullPlayerData.split(", ");
+
+    const playerName = normalizeString(lastName).split("");
 
     // Calculate name length parts
     const nameLengthParts: number[] = [0];
@@ -45,7 +41,8 @@ function Jugador({ position, locationX, locationY }: JugadorProps) {
 
     return {
       currentPlayerName: playerName,
-      lengthString: nameLengthParts.join(", ")
+      lengthString: nameLengthParts.join(", "),
+      firstName: firstNameRaw || ""
     };
   }, [partido, position]);
 
@@ -83,15 +80,24 @@ function Jugador({ position, locationX, locationY }: JugadorProps) {
       </div>
 
       {isSolved && (
-        <span
-          className={`
-            text-xs md:text-lg mt-2 font-semibold text-center
-            ${solvedFontClasses}
-            animate-fade-in
-          `}
-        >
-          {displayName}
-        </span>
+        <div className="flex flex-col items-center mt-2 animate-fade-in">
+          <span
+            className={`
+              text-xs md:text-lg font-semibold text-center
+              ${solvedFontClasses}
+            `}
+          >
+            {displayName}
+          </span>
+          <span
+            className={`
+              text-[10px] md:text-sm text-center
+              ${isCorrect ? 'text-slate-400' : 'text-red-400'}
+            `}
+          >
+            {firstName}
+          </span>
+        </div>
       )}
 
       <style jsx>{`

@@ -46,15 +46,15 @@ function PlayerCompareCard({
   return (
     <div
       className={`
-        relative flex flex-col items-center w-full sm:w-72 md:w-80 min-h-[500px]
+        relative flex flex-col items-center w-full sm:w-72 md:w-80 min-h-[320px] sm:min-h-[450px] md:min-h-[500px]
         bg-gradient-to-br from-slate-800/90 to-slate-900/90
-        backdrop-blur-sm rounded-2xl p-4 sm:p-5 md:p-6 shadow-2xl border border-slate-600/50
+        backdrop-blur-sm rounded-2xl p-3 sm:p-5 md:p-6 shadow-2xl border border-slate-600/50
         transition-all duration-300
         ${animateReveal ? 'scale-105' : 'scale-100'}
       `}
     >
       {/* Player Photo */}
-      <div className="relative w-32 h-40 sm:w-36 sm:h-44 md:w-40 md:h-48 mb-3 sm:mb-4 rounded-lg overflow-hidden border-4 border-slate-600 shadow-lg bg-slate-700">
+      <div className="relative w-24 h-32 sm:w-36 sm:h-44 md:w-40 md:h-48 mb-2 sm:mb-4 rounded-lg overflow-hidden border-4 border-slate-600 shadow-lg bg-slate-700">
         {!imageLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-700 animate-pulse p-4">
             <Image
@@ -83,12 +83,12 @@ function PlayerCompareCard({
       </div>
 
       {/* Player Name */}
-      <div className="mb-3 sm:mb-4 text-center min-h-[60px] flex flex-col justify-center">
-        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">
+      <div className="mb-2 sm:mb-4 text-center min-h-[40px] sm:min-h-[60px] flex flex-col justify-center">
+        <h2 className="text-base sm:text-xl md:text-2xl font-bold text-white leading-tight">
           {player.name}
         </h2>
         {player.nickname && (
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
             &quot;{player.nickname}&quot;
           </p>
         )}
@@ -97,36 +97,36 @@ function PlayerCompareCard({
       {/* Stat Display */}
       <div className="w-full">
         {isRevealed || isLeft ? (
-          <div className="text-center space-y-2">
-            <p className="text-white/80 text-sm">
+          <div className="text-center space-y-1 sm:space-y-2">
+            <p className="text-white/80 text-xs sm:text-sm">
               {isLeft ? 'tiene' : 'tiene'}
             </p>
             <div
               className={`
-                text-2xl sm:text-3xl md:text-4xl font-bold text-cyan-300 p-3 sm:p-4 rounded-xl
+                text-xl sm:text-3xl md:text-4xl font-bold text-cyan-300 p-2 sm:p-4 rounded-xl
                 bg-slate-700/50 border border-slate-600
                 ${animateReveal ? 'animate-pulse' : ''}
               `}
             >
               {statValue.toLocaleString()}
             </div>
-            <p className="text-white/80 text-sm">
+            <p className="text-white/80 text-xs sm:text-sm">
               {statLabel} en Nacional
             </p>
           </div>
         ) : (
-          <div className="text-center space-y-4">
-            <p className="text-white/80 text-sm mb-4">
+          <div className="text-center space-y-2 sm:space-y-4">
+            <p className="text-white/80 text-xs sm:text-sm mb-2 sm:mb-4">
               ¿Tiene más o menos {statLabel}?
             </p>
 
             {/* Guess Buttons */}
             {showButtons && onGuess && (
-              <div className="flex flex-col gap-2 sm:gap-3">
+              <div className="flex flex-col gap-1.5 sm:gap-3">
                 <button
                   onClick={() => onGuess(true)}
                   className="
-                    px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg
+                    px-3 sm:px-6 py-2 sm:py-4 rounded-xl font-bold text-sm sm:text-lg
                     bg-green-600 hover:bg-green-500
                     text-white shadow-lg
                     transform transition-all duration-200
@@ -139,7 +139,7 @@ function PlayerCompareCard({
                 <button
                   onClick={() => onGuess(false)}
                   className="
-                    px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg
+                    px-3 sm:px-6 py-2 sm:py-4 rounded-xl font-bold text-sm sm:text-lg
                     bg-red-600 hover:bg-red-500
                     text-white shadow-lg
                     transform transition-all duration-200
