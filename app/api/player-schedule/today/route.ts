@@ -14,18 +14,25 @@ export async function GET(request: NextRequest) {
     const year = today.getFullYear();
     const dateString = `${day}-${month}-${year}`;
 
+    console.log('🔍 [API] Searching for player scheduled on:', dateString);
+    console.log('🔍 [API] System date:', today.toISOString());
+
     const schedule = await getPlayerScheduleByDate(dateString);
 
+    console.log('🔍 [API] Database result:', schedule);
+
     if (!schedule) {
+      console.warn(`⚠️ [API] No player found for date: ${dateString}`);
       return NextResponse.json(
-        { error: 'No player scheduled for today' },
+        { error: 'No player scheduled for today', searchedDate: dateString },
         { status: 404 }
       );
     }
 
+    console.log('✅ [API] Found scheduled player:', schedule);
     return NextResponse.json(schedule, { status: 200 });
   } catch (error) {
-    console.error('API Error - GET /api/player-schedule/today:', error);
+    console.error('❌ [API] Error - GET /api/player-schedule/today:', error);
     return NextResponse.json(
       { error: 'Failed to get today\'s scheduled player' },
       { status: 500 }

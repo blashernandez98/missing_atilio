@@ -36,25 +36,63 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
       const year = today.getFullYear();
       const todayString = `${day}-${month}-${year}`;
 
+      // Cleanup old localStorage entries (remove solved dates older than today)
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('guessPlayer_solved_')) {
+            const dateStr = key.replace('guessPlayer_solved_', '');
+            if (dateStr !== todayString) {
+              // Parse the date and check if it's before today
+              const [d, m, y] = dateStr.split('-').map(Number);
+              const savedDate = new Date(y, m - 1, d);
+              const todayDate = new Date(year, today.getMonth(), today.getDate());
+
+              if (savedDate < todayDate) {
+                keysToRemove.push(key);
+              }
+            }
+          }
+        }
+        // Remove old keys
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+          console.log(`🧹 Cleaned up old localStorage entry: ${key}`);
+        });
+      } catch (error) {
+        console.error('Error cleaning up localStorage:', error);
+      }
+
       if (playerId !== undefined) {
         // Use provided player ID
         targetPlayer = players.find(p => p.id === playerId) || null;
+        console.log(`📌 Using provided player ID: ${playerId}`);
       } else {
         // Check if today's scheduled player has already been solved
         const solvedToday = localStorage.getItem(`guessPlayer_solved_${todayString}`);
+        console.log(`📅 Today's date: ${todayString}, Already solved: ${!!solvedToday}`);
 
         if (!solvedToday) {
           // Try to fetch scheduled player for today
           try {
+            console.log('🔍 Fetching scheduled player for today...');
             const response = await fetch('/api/player-schedule/today');
             if (response.ok) {
               const schedule = await response.json();
+              console.log('📦 API response:', schedule);
               targetPlayer = players.find(p => p.id === schedule.playerId) || null;
-              isScheduledPlayer = true;
-              console.log('✅ Loaded scheduled player for today');
+              if (targetPlayer) {
+                isScheduledPlayer = true;
+                console.log(`✅ Loaded scheduled player: ${targetPlayer.name} (ID: ${targetPlayer.id})`);
+              } else {
+                console.warn(`⚠️ Player ID ${schedule.playerId} not found in players data`);
+              }
+            } else {
+              console.log(`ℹ️ No scheduled player for today (status: ${response.status})`);
             }
           } catch (error) {
-            console.log('No scheduled player for today, using random player');
+            console.error('❌ Error fetching scheduled player:', error);
           }
         } else {
           console.log('✅ Today\'s scheduled player already solved, using random player');
@@ -64,7 +102,7 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
         if (!targetPlayer) {
           const randomIndex = Math.floor(Math.random() * players.length);
           targetPlayer = players[randomIndex];
-          console.log('Using random player');
+          console.log(`🎲 Using random player: ${targetPlayer.name} (ID: ${targetPlayer.id})`);
         }
       }
 

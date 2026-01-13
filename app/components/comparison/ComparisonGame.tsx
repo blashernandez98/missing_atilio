@@ -30,6 +30,7 @@ function ComparisonGame() {
 
   const [manualPlayerId, setManualPlayerId] = useState<string>('');
   const [showDevTools, setShowDevTools] = useState(false);
+  const [lastStreakBeforeLoss, setLastStreakBeforeLoss] = useState<number>(0);
 
   // Load game state from localStorage on mount
   useEffect(() => {
@@ -237,14 +238,18 @@ function ComparisonGame() {
   };
 
   const endGame = () => {
+    // Save the current streak before resetting it
+    setLastStreakBeforeLoss(gameState.currentStreak);
+
     setGameState({
       ...gameState,
-      currentStreak: 0, // Reset streak immediately on wrong answer
+      currentStreak: 0, // Reset streak immediately on wrong answer to prevent cheat
       gameOver: true,
     });
   };
 
   const closeGameOver = () => {
+    setLastStreakBeforeLoss(0); // Reset for next game
     startNewGame();
   };
 
@@ -331,7 +336,7 @@ function ComparisonGame() {
       {/* Game Over Modal */}
       {gameState.gameOver && (
         <ComparisonGameOver
-          streak={gameState.currentStreak}
+          streak={lastStreakBeforeLoss}
           bestStreak={gameState.bestStreak}
           onClose={closeGameOver}
         />
