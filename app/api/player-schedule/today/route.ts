@@ -1,38 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlayerScheduleByDate } from '@/lib/db';
+import { getTodayStringUruguay } from '@/lib/date';
 
 /**
  * GET /api/player-schedule/today
- * Returns the scheduled player for today (dd-mm-yyyy format)
+ * Returns the scheduled player for today in Uruguay timezone (dd-mm-yyyy format)
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
-    // Get today's date in dd-mm-yyyy format
-    const today = new Date();
-    const day = String(today.getDate()).padStart(2, '0');
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const year = today.getFullYear();
-    const dateString = `${day}-${month}-${year}`;
-
-    console.log('🔍 [API] Searching for player scheduled on:', dateString);
-    console.log('🔍 [API] System date:', today.toISOString());
+    // Get today's date in Uruguay timezone (dd-mm-yyyy format)
+    const dateString = getTodayStringUruguay();
 
     const schedule = await getPlayerScheduleByDate(dateString);
 
-    console.log('🔍 [API] Database result:', schedule);
-
     if (!schedule) {
-      console.warn(`⚠️ [API] No player found for date: ${dateString}`);
       return NextResponse.json(
         { error: 'No player scheduled for today', searchedDate: dateString },
         { status: 404 }
       );
     }
 
-    console.log('✅ [API] Found scheduled player:', schedule);
     return NextResponse.json(schedule, { status: 200 });
   } catch (error) {
-    console.error('❌ [API] Error - GET /api/player-schedule/today:', error);
+    console.error('Error - GET /api/player-schedule/today:', error);
     return NextResponse.json(
       { error: 'Failed to get today\'s scheduled player' },
       { status: 500 }

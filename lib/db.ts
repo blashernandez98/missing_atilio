@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { Cronograma, CronogramaDB, CronogramaCreate, PlayerSchedule, PlayerScheduleDB, PlayerScheduleCreate } from './types';
+import { getTomorrowStringUruguay } from './date';
 
 const getSql = () => {
   const url = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL || '';
@@ -80,7 +81,7 @@ export async function getCronogramaByDate(date: string): Promise<Cronograma | nu
         formation,
         game_index as "gameIndex"
       FROM cronograma
-      WHERE live_date = ${date}
+      WHERE TRIM(live_date) = TRIM(${date})
       LIMIT 1
     ` as any[];
 
@@ -225,7 +226,7 @@ export async function deleteCronograma(id: number): Promise<boolean> {
 
 /**
  * Get next available date (tomorrow if no schedules, or day after last scheduled date)
- * Returns date in dd-mm-yyyy format
+ * Returns date in dd-mm-yyyy format (Uruguay timezone)
  */
 export async function getNextAvailableDate(): Promise<string> {
   try {
@@ -236,10 +237,8 @@ export async function getNextAvailableDate(): Promise<string> {
     ` as any[];
 
     if (results.length === 0) {
-      // No schedules, return tomorrow
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      return formatDateToDDMMYYYY(tomorrow);
+      // No schedules, return tomorrow in Uruguay timezone
+      return getTomorrowStringUruguay();
     }
 
     // Parse all dates and find the maximum
@@ -368,7 +367,7 @@ export async function getPlayerScheduleByDate(date: string): Promise<PlayerSched
         live_date as "liveDate",
         player_id as "playerId"
       FROM player_schedule
-      WHERE live_date = ${date}
+      WHERE TRIM(live_date) = TRIM(${date})
       LIMIT 1
     ` as any[];
 
@@ -506,7 +505,7 @@ export async function deletePlayerSchedule(id: number): Promise<boolean> {
 
 /**
  * Get next available date for player schedule (tomorrow if no schedules, or day after last scheduled date)
- * Returns date in dd-mm-yyyy format
+ * Returns date in dd-mm-yyyy format (Uruguay timezone)
  */
 export async function getNextAvailableDateForPlayerSchedule(): Promise<string> {
   try {
@@ -517,10 +516,8 @@ export async function getNextAvailableDateForPlayerSchedule(): Promise<string> {
     ` as any[];
 
     if (results.length === 0) {
-      // No schedules, return tomorrow
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      return formatDateToDDMMYYYY(tomorrow);
+      // No schedules, return tomorrow in Uruguay timezone
+      return getTomorrowStringUruguay();
     }
 
     // Parse all dates and find the maximum

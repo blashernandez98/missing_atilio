@@ -6,6 +6,7 @@ import AdminField from '@/app/components/admin/AdminField';
 import ControlPanel from '@/app/components/admin/ControlPanel';
 import partidosData from '@/app/data/partidos.json';
 import playersData from '@/app/data/players.json';
+import { getTomorrowStringUruguay, parseDDMMYYYYToDate, formatDateToDDMMYYYY } from '@/lib/date';
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'matches' | 'players'>('matches');
@@ -34,36 +35,20 @@ export default function AdminPage() {
     fetchPlayerSchedules();
   }, []);
 
-  // Helper function to parse dates in dd-mm-yyyy format (for schedules)
-  const parseDateDashes = (dateString: string): Date => {
-    const [day, month, year] = dateString.split('-').map(Number);
-    return new Date(year, month - 1, day);
-  };
-
-  // Helper function to format Date to dd-mm-yyyy
-  const formatDate = (date: Date): string => {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
-  };
-
-  // Calculate next available date from schedules array
+  // Calculate next available date from schedules array (Uruguay timezone)
   const calculateNextAvailableDate = (schedulesList: CronogramaDB[]) => {
     if (schedulesList.length === 0) {
-      // No schedules, return tomorrow
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      return formatDate(tomorrow);
+      // No schedules, return tomorrow in Uruguay timezone
+      return getTomorrowStringUruguay();
     }
 
     // Parse all dates and find the maximum
-    const dates = schedulesList.map(schedule => parseDateDashes(schedule.live_date));
+    const dates = schedulesList.map(schedule => parseDDMMYYYYToDate(schedule.live_date));
     const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
 
     // Add 1 day to the maximum date
     maxDate.setDate(maxDate.getDate() + 1);
-    return formatDate(maxDate);
+    return formatDateToDDMMYYYY(maxDate);
   };
 
   const fetchSchedules = async () => {
@@ -188,22 +173,20 @@ export default function AdminPage() {
     }
   };
 
-  // Player scheduling functions
+  // Player scheduling functions (Uruguay timezone)
   const calculateNextAvailableDateForPlayer = (schedulesList: PlayerScheduleDB[]) => {
     if (schedulesList.length === 0) {
-      // No schedules, return tomorrow
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      return formatDate(tomorrow);
+      // No schedules, return tomorrow in Uruguay timezone
+      return getTomorrowStringUruguay();
     }
 
     // Parse all dates and find the maximum
-    const dates = schedulesList.map(schedule => parseDateDashes(schedule.live_date));
+    const dates = schedulesList.map(schedule => parseDDMMYYYYToDate(schedule.live_date));
     const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
 
     // Add 1 day to the maximum date
     maxDate.setDate(maxDate.getDate() + 1);
-    return formatDate(maxDate);
+    return formatDateToDDMMYYYY(maxDate);
   };
 
   const fetchPlayerSchedules = async () => {

@@ -14,6 +14,7 @@ import cronograma from "@/app/data/cronograma.json";
 import Image from 'next/image';
 import Link from 'next/link';
 import { normalizeString } from '@/lib/utils';
+import { getTodayStringUruguay, getUruguayDate, parseDDMMYYYYToDate } from '@/lib/date';
 export const AppContext = createContext(defaultAppContext);
 
 const partidos_data = data as Partido[];
@@ -36,20 +37,15 @@ function App() {
   useEffect(() => {
     const fetchCronograma = async () => {
       try {
-        console.log('🔄 Fetching cronograma from API...');
         const res = await fetch('/api/cronograma');
-        console.log('📡 Response status:', res.status);
-
         if (res.ok) {
           const data = await res.json();
-          console.log('✅ Cronograma loaded from API:', data.length, 'games');
           setCronogramaData(data);
         } else {
-          console.warn('⚠️ API failed, using fallback cronograma.json');
           setCronogramaData(cronograma_fallback);
         }
       } catch (error) {
-        console.error('❌ Error fetching cronograma, using fallback:', error);
+        console.error('Error fetching cronograma, using fallback:', error);
         setCronogramaData(cronograma_fallback);
       }
     };
@@ -57,41 +53,25 @@ function App() {
     fetchCronograma();
   }, []);
 
-  // Select current game based on today's date (only on first load)
+  // Select current game based on today's date in Uruguay timezone (only on first load)
   useEffect(() => {
     if (cronogramaData.length === 0 || currentGame) return;
 
-    // Get current day in dd-mm-yyyy format (using local time, not UTC)
-    const today = new Date();
-    const day = String(today.getDate()).padStart(2, '0');
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const year = today.getFullYear();
-    const todayString = `${day}-${month}-${year}`;
-
-    console.log('🔍 Buscando partido para hoy:', todayString);
-    console.log('📋 Partidos disponibles:', cronogramaData.map(g => g.liveDate));
+    // Get current day in dd-mm-yyyy format (Uruguay timezone)
+    const todayString = getTodayStringUruguay();
+    const todayDate = getUruguayDate();
 
     // Find game for today
     let game = cronogramaData.find(g => g.liveDate === todayString);
     if (!game) {
-      console.warn("⚠️ No hay partido programado para hoy, buscando el más reciente");
-
       // Find the most recent game that is <= today
-      const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
       const pastGames = cronogramaData.filter(g => {
-        const [day, month, year] = g.liveDate.split('-').map(Number);
-        const gameDate = new Date(year, month - 1, day);
+        const gameDate = parseDDMMYYYYToDate(g.liveDate);
         return gameDate <= todayDate;
       });
 
-      console.log('📅 Partidos pasados encontrados:', pastGames.map(g => g.liveDate));
-
       // Take the last one (most recent) since they're sorted ASC
       game = pastGames.length > 0 ? pastGames[pastGames.length - 1] : cronogramaData[0];
-      console.log("✅ Seleccionado partido más reciente: ", game?.liveDate);
-    } else {
-      console.log("✅ Partido encontrado para hoy:", game.liveDate);
     }
 
     setCurrentGame(game);
@@ -119,7 +99,6 @@ function App() {
         setCurrentPlayer(parsed.currentPlayer || 2);
         setFieldMode(parsed.fieldMode !== undefined ? parsed.fieldMode : true);
         setGameOver(parsed.gameOver || false);
-        console.log('✅ Loaded saved game state for', currentGame.liveDate);
       } catch (error) {
         console.error('Error loading saved game state:', error);
         // Reset to default on error
@@ -198,12 +177,9 @@ function App() {
 
     const newGame = cronogramaData[newIndex];
 
-    // Check if new game is in the future (using local time)
-    const today = new Date();
-    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-    const [day, month, year] = newGame.liveDate.split('-').map(Number);
-    const newGameDate = new Date(year, month - 1, day);
+    // Check if new game is in the future (Uruguay timezone)
+    const todayDate = getUruguayDate();
+    const newGameDate = parseDDMMYYYYToDate(newGame.liveDate);
 
     // Don't allow navigation to future games
     if (newGameDate > todayDate) return;
@@ -272,11 +248,8 @@ function App() {
                     if (currentIndex === -1 || currentIndex === cronogramaData.length - 1) return true;
 
                     const nextGame = cronogramaData[currentIndex + 1];
-                    const today = new Date();
-                    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-                    const [day, month, year] = nextGame.liveDate.split('-').map(Number);
-                    const nextGameDate = new Date(year, month - 1, day);
+                    const todayDate = getUruguayDate();
+                    const nextGameDate = parseDDMMYYYYToDate(nextGame.liveDate);
 
                     return nextGameDate > todayDate;
                   })()}

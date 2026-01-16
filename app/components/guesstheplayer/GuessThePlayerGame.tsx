@@ -6,6 +6,7 @@ import PlayerAutocomplete, { PlayerAutocompleteRef } from './PlayerAutocomplete'
 import GuessResult from './GuessResult';
 import GuessGameOver from './GuessGameOver';
 import playersData from '@/app/data/players.json';
+import { getTodayStringUruguay, getUruguayDate, parseDDMMYYYYToDate } from '@/lib/date';
 
 interface GuessThePlayerGameProps {
   playerId?: number; // Optional: for scheduled daily player
@@ -29,12 +30,9 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
       let targetPlayer: Player | null = null;
       let isScheduledPlayer = false;
 
-      // Get today's date in dd-mm-yyyy format
-      const today = new Date();
-      const day = String(today.getDate()).padStart(2, '0');
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const year = today.getFullYear();
-      const todayString = `${day}-${month}-${year}`;
+      // Get today's date in Uruguay timezone (dd-mm-yyyy format)
+      const todayString = getTodayStringUruguay();
+      const todayDate = getUruguayDate();
 
       // Cleanup old localStorage entries (remove solved dates older than today)
       try {
@@ -45,10 +43,7 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
             const dateStr = key.replace('guessPlayer_solved_', '');
             if (dateStr !== todayString) {
               // Parse the date and check if it's before today
-              const [d, m, y] = dateStr.split('-').map(Number);
-              const savedDate = new Date(y, m - 1, d);
-              const todayDate = new Date(year, today.getMonth(), today.getDate());
-
+              const savedDate = parseDDMMYYYYToDate(dateStr);
               if (savedDate < todayDate) {
                 keysToRemove.push(key);
               }
@@ -58,7 +53,6 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
         // Remove old keys
         keysToRemove.forEach(key => {
           localStorage.removeItem(key);
-          console.log(`🧹 Cleaned up old localStorage entry: ${key}`);
         });
       } catch (error) {
         console.error('Error cleaning up localStorage:', error);
@@ -67,42 +61,30 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
       if (playerId !== undefined) {
         // Use provided player ID
         targetPlayer = players.find(p => p.id === playerId) || null;
-        console.log(`📌 Using provided player ID: ${playerId}`);
       } else {
         // Check if today's scheduled player has already been solved
         const solvedToday = localStorage.getItem(`guessPlayer_solved_${todayString}`);
-        console.log(`📅 Today's date: ${todayString}, Already solved: ${!!solvedToday}`);
 
         if (!solvedToday) {
           // Try to fetch scheduled player for today
           try {
-            console.log('🔍 Fetching scheduled player for today...');
             const response = await fetch('/api/player-schedule/today');
             if (response.ok) {
               const schedule = await response.json();
-              console.log('📦 API response:', schedule);
               targetPlayer = players.find(p => p.id === schedule.playerId) || null;
               if (targetPlayer) {
                 isScheduledPlayer = true;
-                console.log(`✅ Loaded scheduled player: ${targetPlayer.name} (ID: ${targetPlayer.id})`);
-              } else {
-                console.warn(`⚠️ Player ID ${schedule.playerId} not found in players data`);
               }
-            } else {
-              console.log(`ℹ️ No scheduled player for today (status: ${response.status})`);
             }
           } catch (error) {
-            console.error('❌ Error fetching scheduled player:', error);
+            console.error('Error fetching scheduled player:', error);
           }
-        } else {
-          console.log('✅ Today\'s scheduled player already solved, using random player');
         }
 
         // Fallback to random player if no scheduled player or already solved
         if (!targetPlayer) {
           const randomIndex = Math.floor(Math.random() * players.length);
           targetPlayer = players[randomIndex];
-          console.log(`🎲 Using random player: ${targetPlayer.name} (ID: ${targetPlayer.id})`);
         }
       }
 
@@ -204,7 +186,6 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
     // If it's a scheduled player and game is over, mark as solved in localStorage
     if (isGameOver && gameState.isScheduledPlayer && gameState.todayDate) {
       localStorage.setItem(`guessPlayer_solved_${gameState.todayDate}`, 'true');
-      console.log('✅ Marked scheduled player as solved for today');
     }
 
     setGameState({
@@ -227,7 +208,6 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
     // If it's a scheduled player, mark as solved in localStorage
     if (gameState.isScheduledPlayer && gameState.todayDate) {
       localStorage.setItem(`guessPlayer_solved_${gameState.todayDate}`, 'true');
-      console.log('✅ Marked scheduled player as solved (gave up) for today');
     }
 
     setGameState({
