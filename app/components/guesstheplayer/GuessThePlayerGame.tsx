@@ -6,15 +6,27 @@ import PlayerAutocomplete, { PlayerAutocompleteRef } from './PlayerAutocomplete'
 import GuessResult from './GuessResult';
 import GuessGameOver from './GuessGameOver';
 import playersData from '@/app/data/players.json';
-import { getTodayStringUruguay, getUruguayDate, parseDDMMYYYYToDate } from '@/lib/date';
 
-interface GuessThePlayerGameProps {
-  playerId?: number; // Optional: for scheduled daily player
+// Data stored in localStorage for completed games
+export interface CompletionData {
+  guessCount: number;
+  won: boolean;
 }
 
-function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
+interface GuessThePlayerGameProps {
+  playerId: number; // The target player ID to guess
+  scheduleDate: string | null; // The schedule date (null = random mode)
+  previousCompletion: CompletionData | null; // If the game was already completed, this contains the result
+  onComplete: (data: CompletionData) => void; // Called when game is completed (won or gave up)
+  onPlayAgain: () => void; // Called when user wants to play again
+}
+
+function GuessThePlayerGame({ playerId, scheduleDate, previousCompletion, onComplete, onPlayAgain }: GuessThePlayerGameProps) {
   const players: Player[] = playersData as Player[];
   const autocompleteRef = useRef<PlayerAutocompleteRef>(null);
+
+  // Track the previous player to detect navigation vs completion
+  const prevPlayerRef = useRef<{ playerId: number; scheduleDate: string | null } | null>(null);
 
   const [gameState, setGameState] = useState<GuessThePlayerGameState>({
     targetPlayer: null,
@@ -24,83 +36,51 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
     maxGuesses: 5,
   });
 
-  // Initialize game with target player
+  // Initialize/reset game only when navigating to a different player
   useEffect(() => {
-    const initializeGame = async () => {
-      let targetPlayer: Player | null = null;
-      let isScheduledPlayer = false;
+    const currentPlayerKey = { playerId, scheduleDate };
+    const prevPlayerKey = prevPlayerRef.current;
 
-      // Get today's date in Uruguay timezone (dd-mm-yyyy format)
-      const todayString = getTodayStringUruguay();
-      const todayDate = getUruguayDate();
+    // Check if we're navigating to a different player
+    const isNavigating = !prevPlayerKey ||
+      prevPlayerKey.playerId !== playerId ||
+      prevPlayerKey.scheduleDate !== scheduleDate;
 
-      // Cleanup old localStorage entries (remove solved dates older than today)
-      try {
-        const keysToRemove: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('guessPlayer_solved_')) {
-            const dateStr = key.replace('guessPlayer_solved_', '');
-            if (dateStr !== todayString) {
-              // Parse the date and check if it's before today
-              const savedDate = parseDDMMYYYYToDate(dateStr);
-              if (savedDate < todayDate) {
-                keysToRemove.push(key);
-              }
-            }
-          }
-        }
-        // Remove old keys
-        keysToRemove.forEach(key => {
-          localStorage.removeItem(key);
+    // Update the ref for next comparison
+    prevPlayerRef.current = currentPlayerKey;
+
+    // Only reset state when navigating to a different player
+    if (isNavigating) {
+      const targetPlayer = players.find(p => p.id === playerId) || null;
+
+      // If there's previous completion data (navigating to already-completed game),
+      // show the game over state immediately
+      if (previousCompletion) {
+        setGameState({
+          targetPlayer,
+          guesses: [],
+          gameOver: true,
+          won: previousCompletion.won,
+          maxGuesses: 5,
+          isScheduledPlayer: scheduleDate !== null,
+          todayDate: scheduleDate ?? undefined,
+          previousGuessCount: previousCompletion.guessCount,
         });
-      } catch (error) {
-        console.error('Error cleaning up localStorage:', error);
-      }
-
-      if (playerId !== undefined) {
-        // Use provided player ID
-        targetPlayer = players.find(p => p.id === playerId) || null;
       } else {
-        // Check if today's scheduled player has already been solved
-        const solvedToday = localStorage.getItem(`guessPlayer_solved_${todayString}`);
-
-        if (!solvedToday) {
-          // Try to fetch scheduled player for today
-          try {
-            const response = await fetch('/api/player-schedule/today');
-            if (response.ok) {
-              const schedule = await response.json();
-              targetPlayer = players.find(p => p.id === schedule.playerId) || null;
-              if (targetPlayer) {
-                isScheduledPlayer = true;
-              }
-            }
-          } catch (error) {
-            console.error('Error fetching scheduled player:', error);
-          }
-        }
-
-        // Fallback to random player if no scheduled player or already solved
-        if (!targetPlayer) {
-          const randomIndex = Math.floor(Math.random() * players.length);
-          targetPlayer = players[randomIndex];
-        }
+        setGameState({
+          targetPlayer,
+          guesses: [],
+          gameOver: false,
+          won: false,
+          maxGuesses: 5,
+          isScheduledPlayer: scheduleDate !== null,
+          todayDate: scheduleDate ?? undefined,
+        });
       }
-
-      setGameState(prev => ({
-        ...prev,
-        targetPlayer,
-        guesses: [],
-        gameOver: false,
-        won: false,
-        isScheduledPlayer,
-        todayDate: todayString,
-      }));
-    };
-
-    initializeGame();
-  }, [playerId]);
+    }
+    // If not navigating (i.e., previousCompletion changed because user just completed),
+    // don't reset - keep showing the guesses
+  }, [playerId, scheduleDate, previousCompletion]);
 
   const parseDate = (dateString: string | undefined): Date | null => {
     if (!dateString || dateString.trim() === '') return null;
@@ -183,9 +163,10 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
     const isWin = guessedPlayer.id === gameState.targetPlayer.id;
     const isGameOver = isWin;
 
-    // If it's a scheduled player and game is over, mark as solved in localStorage
-    if (isGameOver && gameState.isScheduledPlayer && gameState.todayDate) {
-      localStorage.setItem(`guessPlayer_solved_${gameState.todayDate}`, 'true');
+    // If it's a scheduled player and game is over, save completion data to localStorage
+    if (isGameOver && scheduleDate) {
+      const completionData: CompletionData = { guessCount: newGuesses.length, won: isWin };
+      localStorage.setItem(`guessPlayer_solved_${scheduleDate}`, JSON.stringify(completionData));
     }
 
     setGameState({
@@ -194,6 +175,11 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
       gameOver: isGameOver,
       won: isWin,
     });
+
+    // Notify parent that game is complete
+    if (isGameOver) {
+      onComplete({ guessCount: newGuesses.length, won: isWin });
+    }
 
     // Auto-focus the input after submitting a guess (if not game over and on larger screens)
     // Don't auto-focus on mobile to avoid keyboard covering the clues
@@ -205,9 +191,11 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
   };
 
   const handleGiveUp = () => {
-    // If it's a scheduled player, mark as solved in localStorage
-    if (gameState.isScheduledPlayer && gameState.todayDate) {
-      localStorage.setItem(`guessPlayer_solved_${gameState.todayDate}`, 'true');
+    const completionData: CompletionData = { guessCount: gameState.guesses.length, won: false };
+
+    // If it's a scheduled player, save completion data to localStorage
+    if (scheduleDate) {
+      localStorage.setItem(`guessPlayer_solved_${scheduleDate}`, JSON.stringify(completionData));
     }
 
     setGameState({
@@ -216,21 +204,9 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
       won: false,
       hasGivenUp: true,
     });
-  };
 
-  const resetGame = () => {
-    // Reset to a new random player
-    const randomIndex = Math.floor(Math.random() * players.length);
-    const newTargetPlayer = players[randomIndex];
-
-    setGameState({
-      targetPlayer: newTargetPlayer,
-      guesses: [],
-      gameOver: false,
-      won: false,
-      maxGuesses: 5,
-      hasGivenUp: false,
-    });
+    // Notify parent that game is complete
+    onComplete(completionData);
   };
 
   if (!gameState.targetPlayer) {
@@ -243,17 +219,20 @@ function GuessThePlayerGame({ playerId }: GuessThePlayerGameProps) {
 
   const guessedPlayerIds = gameState.guesses.map(g => g.player.id);
 
+  // Use previousGuessCount if viewing a previously completed game, otherwise use current guesses length
+  const displayGuessCount = gameState.previousGuessCount ?? gameState.guesses.length;
+
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6">
       {/* Game Over Card at Top with Animation */}
       {gameState.gameOver && (
-        <div className="animate-slide-down">
+        <div className={previousCompletion ? '' : 'animate-slide-down'}>
           <GuessGameOver
             player={gameState.targetPlayer}
             won={gameState.won}
-            guessCount={gameState.guesses.length}
+            guessCount={displayGuessCount}
             maxGuesses={gameState.maxGuesses}
-            onPlayAgain={resetGame}
+            onPlayAgain={onPlayAgain}
           />
         </div>
       )}

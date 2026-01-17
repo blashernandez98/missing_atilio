@@ -118,7 +118,7 @@ const PlayerAutocomplete = forwardRef<PlayerAutocompleteRef, PlayerAutocompleteP
         }}
         onKeyDown={handleKeyDown}
         disabled={disabled}
-        placeholder="Escribe el nombre del jugador..."
+        placeholder="Escribí el nombre de un jugador..."
         className="
           w-full px-4 py-3 rounded-lg
           bg-slate-700/50 border-2 border-slate-600

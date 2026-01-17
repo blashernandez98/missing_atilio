@@ -154,4 +154,5 @@ export interface GuessThePlayerGameState {
   hasGivenUp?: boolean
   isScheduledPlayer?: boolean
   todayDate?: string
+  previousGuessCount?: number // Used when viewing a previously completed game
 }
