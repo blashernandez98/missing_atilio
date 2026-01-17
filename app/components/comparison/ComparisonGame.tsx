@@ -4,14 +4,21 @@ import { useState, useEffect } from 'react';
 import type { Player, ComparisonStat, ComparisonGameState } from '@/lib/types';
 import PlayerCompareCard from './PlayerCompareCard';
 import ComparisonGameOver from './ComparisonGameOver';
+import HighscoreModal from '../ui/HighscoreModal';
 import playersData from '@/app/data/players.json';
 
 const players = playersData as Player[];
 
+interface RecordStatsResult {
+  isHighscore: boolean;
+  entryId: number | null;
+  rank: number | null;
+}
+
 // Record game play stats to the server
-async function recordStats(streak: number) {
+async function recordStats(streak: number): Promise<RecordStatsResult> {
   try {
-    await fetch('/api/stats/record', {
+    const res = await fetch('/api/stats/record', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -21,10 +28,18 @@ async function recordStats(streak: number) {
         surrendered: false,
       }),
     });
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        isHighscore: data.isHighscore || false,
+        entryId: data.entryId || null,
+        rank: data.rank || null,
+      };
+    }
   } catch (error) {
-    // Silently fail - analytics shouldn't break the game
     console.error('Failed to record stats:', error);
   }
+  return { isHighscore: false, entryId: null, rank: null };
 }
 
 const STAT_LABELS: Record<ComparisonStat, string> = {
@@ -50,6 +65,14 @@ function ComparisonGame() {
   const [manualPlayerId, setManualPlayerId] = useState<string>('');
   const [showDevTools, setShowDevTools] = useState(false);
   const [lastStreakBeforeLoss, setLastStreakBeforeLoss] = useState<number>(0);
+
+  // Highscore modal state
+  const [highscoreData, setHighscoreData] = useState<{
+    show: boolean;
+    entryId: number | null;
+    score: number;
+    rank: number | null;
+  }>({ show: false, entryId: null, score: 0, rank: null });
 
   // Load game state from localStorage on mount
   useEffect(() => {
@@ -258,11 +281,21 @@ function ComparisonGame() {
 
   const endGame = () => {
     // Save the current streak before resetting it
-    setLastStreakBeforeLoss(gameState.currentStreak);
+    const streakToRecord = gameState.currentStreak;
+    setLastStreakBeforeLoss(streakToRecord);
 
     // Record analytics (only if streak > 0 to avoid recording immediate losses)
-    if (gameState.currentStreak > 0) {
-      recordStats(gameState.currentStreak);
+    if (streakToRecord > 0) {
+      recordStats(streakToRecord).then((result) => {
+        if (result.isHighscore && result.entryId) {
+          setHighscoreData({
+            show: true,
+            entryId: result.entryId,
+            score: streakToRecord,
+            rank: result.rank,
+          });
+        }
+      });
     }
 
     setGameState({
@@ -363,6 +396,18 @@ function ComparisonGame() {
           streak={lastStreakBeforeLoss}
           bestStreak={gameState.bestStreak}
           onClose={closeGameOver}
+        />
+      )}
+
+      {/* Highscore Modal */}
+      {highscoreData.show && highscoreData.entryId && (
+        <HighscoreModal
+          isOpen={highscoreData.show}
+          onClose={() => setHighscoreData(prev => ({ ...prev, show: false }))}
+          entryId={highscoreData.entryId}
+          score={highscoreData.score}
+          rank={highscoreData.rank || 1}
+          gameMode="versus"
         />
       )}
     </div>

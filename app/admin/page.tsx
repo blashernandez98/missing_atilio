@@ -1,15 +1,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Partido, CronogramaDB, PlayerScheduleDB, Player } from '@/lib/types';
+import { Partido, CronogramaDB, PlayerScheduleDB, Player, GameMode, LeaderboardEntry } from '@/lib/types';
 import AdminField from '@/app/components/admin/AdminField';
 import ControlPanel from '@/app/components/admin/ControlPanel';
 import partidosData from '@/app/data/partidos.json';
 import playersData from '@/app/data/players.json';
 import { getTomorrowStringUruguay, parseDDMMYYYYToDate, formatDateToDDMMYYYY } from '@/lib/date';
 
+const GAME_MODE_LABELS: Record<GameMode, string> = {
+  'wordle': 'Missing 11',
+  'versus': '¿Quién tiene más?',
+  'guess_player_scheduled': 'Adivina el Jugador (Diario)',
+  'guess_player_random': 'Adivina el Jugador (Aleatorio)',
+};
+
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'matches' | 'players'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'players' | 'leaderboard'>('matches');
 
   // Match scheduling state
   const [selectedMatch, setSelectedMatch] = useState<Partido | null>(null);
@@ -25,6 +32,15 @@ export default function AdminPage() {
   const [playerScheduleDate, setPlayerScheduleDate] = useState<string>('');
   const [playerSchedules, setPlayerSchedules] = useState<PlayerScheduleDB[]>([]);
   const [isPlayerSaving, setIsPlayerSaving] = useState(false);
+
+  // Leaderboard state
+  const [leaderboards, setLeaderboards] = useState<Record<GameMode, LeaderboardEntry[]>>({
+    'wordle': [],
+    'versus': [],
+    'guess_player_scheduled': [],
+    'guess_player_random': [],
+  });
+  const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
 
   const partidos: Partido[] = partidosData as Partido[];
   const players: Player[] = playersData as Player[];
@@ -274,10 +290,52 @@ export default function AdminPage() {
     return new Date(year, month - 1, day);
   };
 
+  // Fetch leaderboards for all game modes
+  const fetchLeaderboards = async () => {
+    setIsLoadingLeaderboard(true);
+    try {
+      const gameModes: GameMode[] = ['wordle', 'versus', 'guess_player_scheduled', 'guess_player_random'];
+      const results = await Promise.all(
+        gameModes.map(async (mode) => {
+          const res = await fetch(`/api/stats/leaderboard?gameMode=${mode}&limit=20`);
+          if (res.ok) {
+            const data = await res.json();
+            return { mode, data };
+          }
+          return { mode, data: [] };
+        })
+      );
+
+      const newLeaderboards: Record<GameMode, LeaderboardEntry[]> = {
+        'wordle': [],
+        'versus': [],
+        'guess_player_scheduled': [],
+        'guess_player_random': [],
+      };
+
+      results.forEach(({ mode, data }) => {
+        newLeaderboards[mode] = data;
+      });
+
+      setLeaderboards(newLeaderboards);
+    } catch (error) {
+      console.error('Error fetching leaderboards:', error);
+    } finally {
+      setIsLoadingLeaderboard(false);
+    }
+  };
+
+  // Fetch leaderboards when tab is selected
+  useEffect(() => {
+    if (activeTab === 'leaderboard') {
+      fetchLeaderboards();
+    }
+  }, [activeTab]);
+
   return (
     <div className="flex flex-col gap-6 px-4">
       {/* Tabs */}
-      <div className="flex gap-2 justify-center">
+      <div className="flex gap-2 justify-center flex-wrap">
         <button
           onClick={() => setActiveTab('matches')}
           className={`px-6 py-3 rounded-lg font-bold transition-all ${
@@ -286,7 +344,7 @@ export default function AdminPage() {
               : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
           }`}
         >
-          Programar Partidos (Missing11)
+          Programar Partidos
         </button>
         <button
           onClick={() => setActiveTab('players')}
@@ -296,7 +354,17 @@ export default function AdminPage() {
               : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
           }`}
         >
-          Programar Jugadores (Adivina el Jugador)
+          Programar Jugadores
+        </button>
+        <button
+          onClick={() => setActiveTab('leaderboard')}
+          className={`px-6 py-3 rounded-lg font-bold transition-all ${
+            activeTab === 'leaderboard'
+              ? 'bg-yellow-600 text-white'
+              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+          }`}
+        >
+          Leaderboard
         </button>
       </div>
 
@@ -419,6 +487,75 @@ export default function AdminPage() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Leaderboard */}
+      {activeTab === 'leaderboard' && (
+        <div className="max-w-6xl mx-auto w-full">
+          <div className="flex flex-col gap-6 p-4 bg-slate-900 rounded-lg">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-slate-50">
+                Leaderboards
+              </h2>
+              <button
+                onClick={fetchLeaderboards}
+                disabled={isLoadingLeaderboard}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white font-bold py-2 px-4 rounded-md transition-all"
+              >
+                {isLoadingLeaderboard ? 'Cargando...' : 'Actualizar'}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {(['versus', 'wordle', 'guess_player_scheduled', 'guess_player_random'] as GameMode[]).map((mode) => (
+                <div key={mode} className="bg-slate-800 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-3">
+                    {GAME_MODE_LABELS[mode]}
+                  </h3>
+                  <p className="text-xs text-slate-400 mb-2">
+                    {mode === 'versus' ? 'Mayor racha = mejor' : 'Menos intentos = mejor'}
+                  </p>
+
+                  {leaderboards[mode].length === 0 ? (
+                    <p className="text-slate-500 text-sm">No hay registros aún.</p>
+                  ) : (
+                    <div className="space-y-1 max-h-64 overflow-y-auto">
+                      {leaderboards[mode].map((entry, index) => (
+                        <div
+                          key={entry.id}
+                          className={`flex items-center gap-3 p-2 rounded ${
+                            index < 3 ? 'bg-yellow-900/30' : 'bg-slate-700/50'
+                          }`}
+                        >
+                          <span className={`w-6 text-center font-bold ${
+                            index === 0 ? 'text-yellow-400' :
+                            index === 1 ? 'text-slate-300' :
+                            index === 2 ? 'text-amber-600' :
+                            'text-slate-500'
+                          }`}>
+                            {index + 1}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white font-medium truncate">
+                              {entry.playerName || 'Anónimo'}
+                            </p>
+                            <p className="text-slate-400 text-xs">
+                              {entry.targetDate && `${entry.targetDate} • `}
+                              {new Date(entry.createdAt).toLocaleDateString('es-UY')}
+                            </p>
+                          </div>
+                          <span className="text-lg font-bold text-cyan-400">
+                            {entry.score}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>

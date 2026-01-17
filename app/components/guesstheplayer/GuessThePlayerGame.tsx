@@ -5,7 +5,14 @@ import type { Player, GuessThePlayerGameState, PlayerGuess, ComparisonResult, Ga
 import PlayerAutocomplete, { PlayerAutocompleteRef } from './PlayerAutocomplete';
 import GuessResult from './GuessResult';
 import GuessGameOver from './GuessGameOver';
+import HighscoreModal from '../ui/HighscoreModal';
 import playersData from '@/app/data/players.json';
+
+interface RecordStatsResult {
+  isHighscore: boolean;
+  entryId: number | null;
+  rank: number | null;
+}
 
 // Record game play stats to the server
 async function recordStats(params: {
@@ -15,17 +22,25 @@ async function recordStats(params: {
   surrendered?: boolean;
   targetId?: number;
   targetDate?: string;
-}) {
+}): Promise<RecordStatsResult> {
   try {
-    await fetch('/api/stats/record', {
+    const res = await fetch('/api/stats/record', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
     });
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        isHighscore: data.isHighscore || false,
+        entryId: data.entryId || null,
+        rank: data.rank || null,
+      };
+    }
   } catch (error) {
-    // Silently fail - analytics shouldn't break the game
     console.error('Failed to record stats:', error);
   }
+  return { isHighscore: false, entryId: null, rank: null };
 }
 
 // Data stored in localStorage for completed games
@@ -56,6 +71,15 @@ function GuessThePlayerGame({ playerId, scheduleDate, previousCompletion, onComp
     won: false,
     maxGuesses: 5,
   });
+
+  // Highscore modal state
+  const [highscoreData, setHighscoreData] = useState<{
+    show: boolean;
+    entryId: number | null;
+    score: number;
+    rank: number | null;
+    gameMode: GameMode;
+  }>({ show: false, entryId: null, score: 0, rank: null, gameMode: 'guess_player_scheduled' });
 
   // Initialize/reset game only when navigating to a different player
   useEffect(() => {
@@ -201,14 +225,25 @@ function GuessThePlayerGame({ playerId, scheduleDate, previousCompletion, onComp
     if (isGameOver) {
       onComplete({ guessCount: newGuesses.length, won: isWin });
 
-      // Record analytics
+      // Record analytics and check for highscore
+      const gameMode: GameMode = scheduleDate ? 'guess_player_scheduled' : 'guess_player_random';
       recordStats({
-        gameMode: scheduleDate ? 'guess_player_scheduled' : 'guess_player_random',
+        gameMode,
         won: isWin,
         score: newGuesses.length,
         surrendered: false,
         targetId: playerId,
         targetDate: scheduleDate ?? undefined,
+      }).then((result) => {
+        if (result.isHighscore && result.entryId) {
+          setHighscoreData({
+            show: true,
+            entryId: result.entryId,
+            score: newGuesses.length,
+            rank: result.rank,
+            gameMode,
+          });
+        }
       });
     }
 
@@ -316,6 +351,18 @@ function GuessThePlayerGame({ playerId, scheduleDate, previousCompletion, onComp
             })}
           </div>
         </div>
+      )}
+
+      {/* Highscore Modal */}
+      {highscoreData.show && highscoreData.entryId && (
+        <HighscoreModal
+          isOpen={highscoreData.show}
+          onClose={() => setHighscoreData(prev => ({ ...prev, show: false }))}
+          entryId={highscoreData.entryId}
+          score={highscoreData.score}
+          rank={highscoreData.rank || 1}
+          gameMode={highscoreData.gameMode}
+        />
       )}
     </div>
   );

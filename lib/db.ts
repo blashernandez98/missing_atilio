@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless';
-import { Cronograma, CronogramaDB, CronogramaCreate, PlayerSchedule, PlayerScheduleDB, PlayerScheduleCreate, GameMode, DailyGameStats, LeaderboardEntry, RecordGamePlayParams } from './types';
+import { Cronograma, CronogramaDB, CronogramaCreate, PlayerSchedule, PlayerScheduleDB, PlayerScheduleCreate, GameMode, DailyGameStats, LeaderboardEntry, RecordGamePlayParams, RecordGamePlayResult } from './types';
 import { getTomorrowStringUruguay, getTodayStringUruguay } from './date';
 
 const getSql = () => {
@@ -537,8 +537,17 @@ export async function getNextAvailableDateForPlayerSchedule(): Promise<string> {
 
 /**
  * Record a game play - updates daily stats and potentially adds to leaderboard
+ * Returns whether this is a highscore and the entry ID for name submission
+ *
+ * Highscore logic:
+ * - wordle: best (lowest) score for that specific targetDate
+ * - guess_player_scheduled: best (lowest) score for that specific targetDate
+ * - guess_player_random: best (lowest) score overall for random mode
+ * - versus: top 10 overall (highest streaks)
  */
-export async function recordGamePlay(params: RecordGamePlayParams): Promise<void> {
+export async function recordGamePlay(params: RecordGamePlayParams): Promise<RecordGamePlayResult> {
+  const defaultResult: RecordGamePlayResult = { isHighscore: false, entryId: null, rank: null };
+
   try {
     const sql = getSql();
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format for DB
@@ -563,50 +572,103 @@ export async function recordGamePlay(params: RecordGamePlayParams): Promise<void
         updated_at = CURRENT_TIMESTAMP
     `;
 
-    // Add to leaderboard if it's a win (for guess games) or any play (for versus)
-    if (params.won || params.gameMode === 'versus') {
+    // Only add to leaderboard if it's a win (for guess games) or any play (for versus)
+    if (!params.won && params.gameMode !== 'versus') {
+      return defaultResult;
+    }
+
+    // Insert the entry and get its ID
+    const insertResult = await sql`
+      INSERT INTO leaderboard (game_mode, score, session_id, target_id, target_date)
+      VALUES (
+        ${params.gameMode},
+        ${params.score},
+        ${params.sessionId || null},
+        ${params.targetId || null},
+        ${params.targetDate || null}
+      )
+      RETURNING id
+    ` as any[];
+
+    const entryId = insertResult[0]?.id;
+
+    // Determine if this is a highscore based on game mode
+    let isHighscore = false;
+    let rank: number | null = null;
+
+    if (params.gameMode === 'versus') {
+      // Versus: top 10 overall (higher is better)
+      const rankResult = await sql`
+        SELECT COUNT(*) + 1 as rank
+        FROM leaderboard
+        WHERE game_mode = 'versus'
+        AND score > ${params.score}
+      ` as any[];
+      rank = parseInt(rankResult[0]?.rank) || null;
+      isHighscore = rank !== null && rank <= 10;
+    } else if (params.gameMode === 'guess_player_random') {
+      // Random mode: best overall (lower is better)
+      const rankResult = await sql`
+        SELECT COUNT(*) + 1 as rank
+        FROM leaderboard
+        WHERE game_mode = 'guess_player_random'
+        AND score < ${params.score}
+      ` as any[];
+      rank = parseInt(rankResult[0]?.rank) || null;
+      isHighscore = rank === 1; // Only #1 is a highscore for random
+    } else {
+      // Wordle and guess_player_scheduled: best for that specific date (lower is better)
+      const rankResult = await sql`
+        SELECT COUNT(*) + 1 as rank
+        FROM leaderboard
+        WHERE game_mode = ${params.gameMode}
+        AND target_date = ${params.targetDate}
+        AND score < ${params.score}
+      ` as any[];
+      rank = parseInt(rankResult[0]?.rank) || null;
+      isHighscore = rank === 1; // Only #1 for that date is a highscore
+    }
+
+    // Prune leaderboard to keep only top 100 per game mode
+    const isLowerBetter = params.gameMode !== 'versus';
+
+    if (isLowerBetter) {
       await sql`
-        INSERT INTO leaderboard (game_mode, score, session_id, target_id, target_date)
-        VALUES (
-          ${params.gameMode},
-          ${params.score},
-          ${params.sessionId || null},
-          ${params.targetId || null},
-          ${params.targetDate || null}
+        DELETE FROM leaderboard
+        WHERE game_mode = ${params.gameMode}
+        AND id NOT IN (
+          SELECT id FROM leaderboard
+          WHERE game_mode = ${params.gameMode}
+          ORDER BY score ASC, created_at DESC
+          LIMIT 100
         )
       `;
-
-      // Prune leaderboard to keep only top 100 per game mode
-      // For guess games, lower score is better; for versus, higher is better
-      const isLowerBetter = params.gameMode !== 'versus';
-
-      if (isLowerBetter) {
-        await sql`
-          DELETE FROM leaderboard
+    } else {
+      await sql`
+        DELETE FROM leaderboard
+        WHERE game_mode = ${params.gameMode}
+        AND id NOT IN (
+          SELECT id FROM leaderboard
           WHERE game_mode = ${params.gameMode}
-          AND id NOT IN (
-            SELECT id FROM leaderboard
-            WHERE game_mode = ${params.gameMode}
-            ORDER BY score ASC, created_at DESC
-            LIMIT 100
-          )
-        `;
-      } else {
-        await sql`
-          DELETE FROM leaderboard
-          WHERE game_mode = ${params.gameMode}
-          AND id NOT IN (
-            SELECT id FROM leaderboard
-            WHERE game_mode = ${params.gameMode}
-            ORDER BY score DESC, created_at DESC
-            LIMIT 100
-          )
-        `;
-      }
+          ORDER BY score DESC, created_at DESC
+          LIMIT 100
+        )
+      `;
     }
+
+    // Check if our entry was pruned
+    const stillExists = await sql`
+      SELECT id FROM leaderboard WHERE id = ${entryId}
+    ` as any[];
+
+    if (stillExists.length === 0) {
+      return defaultResult; // Entry was pruned, not a highscore
+    }
+
+    return { isHighscore, entryId, rank };
   } catch (error) {
     console.error('Error recording game play:', error);
-    // Don't throw - analytics failures shouldn't break the game
+    return defaultResult;
   }
 }
 

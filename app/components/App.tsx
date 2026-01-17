@@ -6,6 +6,7 @@ import GameOver from "@/app/components/GameOver";
 import InfoCard from "@/app/components/InfoCard";
 import Instructions from '@/app/components/Instructions';
 import Footer from "@/app/components/common/Footer";
+import HighscoreModal from "@/app/components/ui/HighscoreModal";
 import { createContext, useState, useEffect, useRef } from "react";
 import { defaultAppContext } from "@/lib/Context"
 import { Partido, Guesses, Solved, Cronograma } from "@/lib/types";
@@ -17,14 +18,20 @@ import { normalizeString } from '@/lib/utils';
 import { getTodayStringUruguay, getUruguayDate, parseDDMMYYYYToDate } from '@/lib/date';
 export const AppContext = createContext(defaultAppContext);
 
+interface RecordStatsResult {
+  isHighscore: boolean;
+  entryId: number | null;
+  rank: number | null;
+}
+
 // Record game play stats to the server
 async function recordWordleStats(params: {
   won: boolean;
   score: number;
   targetDate?: string;
-}) {
+}): Promise<RecordStatsResult> {
   try {
-    await fetch('/api/stats/record', {
+    const res = await fetch('/api/stats/record', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -35,10 +42,18 @@ async function recordWordleStats(params: {
         targetDate: params.targetDate,
       }),
     });
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        isHighscore: data.isHighscore || false,
+        entryId: data.entryId || null,
+        rank: data.rank || null,
+      };
+    }
   } catch (error) {
-    // Silently fail - analytics shouldn't break the game
     console.error('Failed to record stats:', error);
   }
+  return { isHighscore: false, entryId: null, rank: null };
 }
 
 const partidos_data = data as Partido[];
@@ -59,6 +74,14 @@ function App() {
 
   // Track if we've recorded stats for the current game to prevent duplicates
   const statsRecordedRef = useRef<string | null>(null);
+
+  // Highscore modal state
+  const [highscoreData, setHighscoreData] = useState<{
+    show: boolean;
+    entryId: number | null;
+    score: number;
+    rank: number | null;
+  }>({ show: false, entryId: null, score: 0, rank: null });
 
   // Fetch cronograma from API on mount
   useEffect(() => {
@@ -179,12 +202,22 @@ function App() {
     const allPlayersAttempted = Object.keys(solved).length === 11;
     if (!allPlayersAttempted) return;
 
-    // Record stats
+    // Record stats and check for highscore
     statsRecordedRef.current = currentGame.liveDate;
+    const won = solvedPlayers === 11;
     recordWordleStats({
-      won: solvedPlayers === 11,
+      won,
       score: totalGuesses,
       targetDate: currentGame.liveDate,
+    }).then((result) => {
+      if (result.isHighscore && result.entryId) {
+        setHighscoreData({
+          show: true,
+          entryId: result.entryId,
+          score: totalGuesses,
+          rank: result.rank,
+        });
+      }
     });
   }, [gameOver, currentGame, solved]);
 
@@ -322,6 +355,18 @@ function App() {
           <GameOver />
         </div>
         <Footer />
+
+        {/* Highscore Modal */}
+        {highscoreData.show && highscoreData.entryId && (
+          <HighscoreModal
+            isOpen={highscoreData.show}
+            onClose={() => setHighscoreData(prev => ({ ...prev, show: false }))}
+            entryId={highscoreData.entryId}
+            score={highscoreData.score}
+            rank={highscoreData.rank || 1}
+            gameMode="wordle"
+          />
+        )}
       </AppContext.Provider>
     </div>
   );

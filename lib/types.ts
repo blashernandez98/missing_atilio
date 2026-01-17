@@ -190,3 +190,9 @@ export interface RecordGamePlayParams {
   targetId?: number;
   targetDate?: string;
 }
+
+export interface RecordGamePlayResult {
+  isHighscore: boolean;
+  entryId: number | null;
+  rank: number | null; // Position in leaderboard (1 = best)
+}

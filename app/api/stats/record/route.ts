@@ -46,9 +46,14 @@ export async function POST(request: NextRequest) {
       targetDate: body.targetDate,
     };
 
-    await recordGamePlay(params);
+    const result = await recordGamePlay(params);
 
-    return NextResponse.json({ success: true }, { status: 200 });
+    return NextResponse.json({
+      success: true,
+      isHighscore: result.isHighscore,
+      entryId: result.entryId,
+      rank: result.rank,
+    }, { status: 200 });
   } catch (error) {
     console.error('API Error - POST /api/stats/record:', error);
     return NextResponse.json(
