@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Player } from '@/lib/types';
-import { POSITION_MAPPINGS } from '@/lib/position-mappings';
+import { getPositionLabel } from '@/lib/position-mappings';
 
 interface GuessGameOverProps {
   player: Player;
@@ -14,17 +14,6 @@ interface GuessGameOverProps {
 }
 
 function GuessGameOver({ player, won, guessCount, maxGuesses, onPlayAgain }: GuessGameOverProps) {
-  // Get position label from category
-  const getPositionLabel = (category?: string): string => {
-    if (!category) return 'N/A';
-    const labels: Record<string, string> = {
-      'GOL': 'Arquero',
-      'DEF': 'Defensa',
-      'MED': 'Mediocampista',
-      'ATA': 'Delantero',
-    };
-    return labels[category] || category;
-  };
 
   return (
     <div className="w-full mb-6">

@@ -24,7 +24,12 @@ function PlayerScheduleNav({
   const isRandomMode = currentDate === null;
 
   return (
-    <div className="flex items-center justify-center w-full max-w-4xl mx-auto px-4 relative">
+    <div className="flex flex-col items-center w-full max-w-4xl mx-auto px-4 relative">
+      {/* Label above navigation */}
+      <span className="text-xs text-slate-400 uppercase tracking-wider mb-1">
+        Jugador del día
+      </span>
+
       {/* Centered Navigation */}
       <div className="flex items-center gap-2 sm:gap-3">
         <button
@@ -68,7 +73,7 @@ function PlayerScheduleNav({
       {/* Help button - positioned absolutely on the right */}
       <button
         onClick={onShowInstructions}
-        className="absolute right-4 group flex items-center gap-2 px-3 py-2 rounded-full bg-slate-700/50 hover:bg-slate-600/50 text-white font-bold transition-all border border-slate-600 hover:border-slate-500"
+        className="absolute right-4 top-1/2 -translate-y-1/2 group flex items-center gap-2 px-3 py-2 rounded-full bg-slate-700/50 hover:bg-slate-600/50 text-white font-bold transition-all border border-slate-600 hover:border-slate-500"
         aria-label="Cómo jugar"
       >
         <span className="text-lg">?</span>

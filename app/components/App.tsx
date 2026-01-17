@@ -6,7 +6,7 @@ import GameOver from "@/app/components/GameOver";
 import InfoCard from "@/app/components/InfoCard";
 import Instructions from '@/app/components/Instructions';
 import Footer from "@/app/components/common/Footer";
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useRef } from "react";
 import { defaultAppContext } from "@/lib/Context"
 import { Partido, Guesses, Solved, Cronograma } from "@/lib/types";
 import data from "@/app/data/partidos.json";
@@ -16,6 +16,30 @@ import Link from 'next/link';
 import { normalizeString } from '@/lib/utils';
 import { getTodayStringUruguay, getUruguayDate, parseDDMMYYYYToDate } from '@/lib/date';
 export const AppContext = createContext(defaultAppContext);
+
+// Record game play stats to the server
+async function recordWordleStats(params: {
+  won: boolean;
+  score: number;
+  targetDate?: string;
+}) {
+  try {
+    await fetch('/api/stats/record', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        gameMode: 'wordle',
+        won: params.won,
+        score: params.score,
+        surrendered: false,
+        targetDate: params.targetDate,
+      }),
+    });
+  } catch (error) {
+    // Silently fail - analytics shouldn't break the game
+    console.error('Failed to record stats:', error);
+  }
+}
 
 const partidos_data = data as Partido[];
 const cronograma_fallback = cronograma as Cronograma[];
@@ -32,6 +56,9 @@ function App() {
   const [instructions, setInstructions] = useState(false);
   const [cronogramaData, setCronogramaData] = useState<Cronograma[]>([]);
   const [currentGame, setCurrentGame] = useState<Cronograma | null>(null);
+
+  // Track if we've recorded stats for the current game to prevent duplicates
+  const statsRecordedRef = useRef<string | null>(null);
 
   // Fetch cronograma from API on mount
   useEffect(() => {
@@ -133,6 +160,33 @@ function App() {
     localStorage.setItem(`missing11_${currentGame.liveDate}`, JSON.stringify(gameState));
   }, [currentGame, guesses, solved, currentPlayer, fieldMode, gameOver]);
 
+  // Record stats when game is completed (all 11 players solved or failed)
+  useEffect(() => {
+    if (!gameOver || !currentGame) return;
+
+    // Check if we've already recorded stats for this game
+    if (statsRecordedRef.current === currentGame.liveDate) return;
+
+    // Calculate stats from solved state
+    let solvedPlayers = 0;
+    let totalGuesses = 0;
+    for (let i = 1; i <= 11; i++) {
+      if (solved[i] && solved[i] < 6) solvedPlayers++;
+      if (solved[i]) totalGuesses += solved[i];
+    }
+
+    // Only record if all 11 players have been attempted
+    const allPlayersAttempted = Object.keys(solved).length === 11;
+    if (!allPlayersAttempted) return;
+
+    // Record stats
+    statsRecordedRef.current = currentGame.liveDate;
+    recordWordleStats({
+      won: solvedPlayers === 11,
+      score: totalGuesses,
+      targetDate: currentGame.liveDate,
+    });
+  }, [gameOver, currentGame, solved]);
 
   const toggleFieldMode = () => {
     setFieldMode(!fieldMode);

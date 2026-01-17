@@ -156,3 +156,37 @@ export interface GuessThePlayerGameState {
   todayDate?: string
   previousGuessCount?: number // Used when viewing a previously completed game
 }
+
+// Analytics types
+export type GameMode = 'guess_player_scheduled' | 'guess_player_random' | 'versus' | 'wordle';
+
+export interface DailyGameStats {
+  id: number;
+  date: string;
+  gameMode: GameMode;
+  plays: number;
+  wins: number;
+  surrenders: number;
+  totalScore: number;
+}
+
+export interface LeaderboardEntry {
+  id: number;
+  gameMode: GameMode;
+  score: number;
+  playerName: string | null;
+  sessionId: string | null;
+  targetId: number | null;
+  targetDate: string | null;
+  createdAt: Date;
+}
+
+export interface RecordGamePlayParams {
+  gameMode: GameMode;
+  won: boolean;
+  surrendered?: boolean;
+  score: number; // guesses for guess games, streak for versus
+  sessionId?: string;
+  targetId?: number;
+  targetDate?: string;
+}

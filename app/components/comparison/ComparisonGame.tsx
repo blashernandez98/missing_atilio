@@ -8,6 +8,25 @@ import playersData from '@/app/data/players.json';
 
 const players = playersData as Player[];
 
+// Record game play stats to the server
+async function recordStats(streak: number) {
+  try {
+    await fetch('/api/stats/record', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        gameMode: 'versus',
+        won: false, // Versus always ends on loss
+        score: streak,
+        surrendered: false,
+      }),
+    });
+  } catch (error) {
+    // Silently fail - analytics shouldn't break the game
+    console.error('Failed to record stats:', error);
+  }
+}
+
 const STAT_LABELS: Record<ComparisonStat, string> = {
   totalMatches: 'partidos jugados',
   totalGoals: 'goles',
@@ -240,6 +259,11 @@ function ComparisonGame() {
   const endGame = () => {
     // Save the current streak before resetting it
     setLastStreakBeforeLoss(gameState.currentStreak);
+
+    // Record analytics (only if streak > 0 to avoid recording immediate losses)
+    if (gameState.currentStreak > 0) {
+      recordStats(gameState.currentStreak);
+    }
 
     setGameState({
       ...gameState,

@@ -87,15 +87,20 @@ function GuessThePlayerInstructions({ isOpen, onClose }: GuessThePlayerInstructi
             </div>
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-1">
+          {/* Top row: Text fields */}
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-1 mb-1">
             <ExampleStatCell label="País" value="Uruguay" comparison="exact" />
             <ExampleStatCell label="Ciudad" value="Salto" comparison="different" />
-            <ExampleStatCell label="Posición" value="Delantero" comparison="different" />
+            <ExampleStatCell label="Posición" value="Del. Centro" comparison="different" />
             <ExampleStatCell label="F. Nac." value="24/01/1987" comparison="lower" />
+            <ExampleStatCell label="Proviene" value="Div. juveniles" comparison="different" />
+          </div>
+
+          {/* Bottom row: Numerical fields */}
+          <div className="grid grid-cols-4 gap-1">
             <ExampleStatCell label="Debut" value="2004" comparison="higher" />
             <ExampleStatCell label="Partidos" value="65" comparison="higher" />
             <ExampleStatCell label="Goles" value="25" comparison="lower" />
-            <ExampleStatCell label="Proviene" value="Div. juveniles" comparison="different" />
             <ExampleStatCell label="Títulos" value="5" comparison="higher" />
           </div>
         </div>

@@ -7,7 +7,7 @@ import GuessThePlayerInstructions from '@/app/components/guesstheplayer/GuessThe
 import PlayerScheduleNav from '@/app/components/guesstheplayer/PlayerScheduleNav';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getTodayStringUruguay, parseDDMMYYYYToDate, getUruguayDate } from '@/lib/date';
+import { parseDDMMYYYYToDate, getUruguayDate } from '@/lib/date';
 import type { PlayerSchedule } from '@/lib/types';
 import playersData from '@/app/data/players.json';
 
@@ -55,7 +55,6 @@ export default function AdivinaJugadorPage() {
         const schedules: PlayerSchedule[] = response.ok ? await response.json() : [];
 
         // Get today's date in Uruguay timezone
-        const todayString = getTodayStringUruguay();
         const todayDate = getUruguayDate();
 
         // Filter schedules to only include dates up to today and sort by date ascending
@@ -86,23 +85,9 @@ export default function AdivinaJugadorPage() {
           }
         }
 
-        // Find the first incomplete scheduled player (starting from today and going back)
-        // Or if all are complete, go to random mode
-        let initialIndex = -1;
-
-        // First, check if today has a scheduled player that's not completed
-        const todayIndex = validSchedules.findIndex(s => s.liveDate === todayString);
-        if (todayIndex !== -1 && !completions.has(todayString)) {
-          initialIndex = todayIndex;
-        } else {
-          // Find the first incomplete scheduled player from the beginning
-          for (let i = 0; i < validSchedules.length; i++) {
-            if (!completions.has(validSchedules[i].liveDate)) {
-              initialIndex = i;
-              break;
-            }
-          }
-        }
+        // Default to the newest/latest scheduled player (last in array since sorted ascending)
+        // Even if it's already solved, user will manually navigate if needed
+        let initialIndex = validSchedules.length > 0 ? validSchedules.length - 1 : -1;
 
         setNavState({
           schedules: validSchedules,
@@ -199,24 +184,13 @@ export default function AdivinaJugadorPage() {
         };
       }
 
-      // Scheduled mode - find next incomplete player or go to random
+      // Scheduled mode - find newest/latest unsolved player (search from end backwards)
       let nextIndex = -1;
 
-      // First check if there are any incomplete scheduled players after current
-      for (let i = prev.currentIndex + 1; i < prev.schedules.length; i++) {
+      for (let i = prev.schedules.length - 1; i >= 0; i--) {
         if (!prev.completions.has(prev.schedules[i].liveDate)) {
           nextIndex = i;
           break;
-        }
-      }
-
-      // If not found after, check from beginning
-      if (nextIndex === -1) {
-        for (let i = 0; i < prev.currentIndex; i++) {
-          if (!prev.completions.has(prev.schedules[i].liveDate)) {
-            nextIndex = i;
-            break;
-          }
         }
       }
 

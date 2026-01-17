@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
-import { Cronograma, CronogramaDB, CronogramaCreate, PlayerSchedule, PlayerScheduleDB, PlayerScheduleCreate } from './types';
-import { getTomorrowStringUruguay } from './date';
+import { Cronograma, CronogramaDB, CronogramaCreate, PlayerSchedule, PlayerScheduleDB, PlayerScheduleCreate, GameMode, DailyGameStats, LeaderboardEntry, RecordGamePlayParams } from './types';
+import { getTomorrowStringUruguay, getTodayStringUruguay } from './date';
 
 const getSql = () => {
   const url = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL || '';
@@ -530,5 +530,252 @@ export async function getNextAvailableDateForPlayerSchedule(): Promise<string> {
   } catch (error) {
     console.error('Error getting next available date for player schedule:', error);
     throw error;
+  }
+}
+
+// ==================== GAME ANALYTICS ====================
+
+/**
+ * Record a game play - updates daily stats and potentially adds to leaderboard
+ */
+export async function recordGamePlay(params: RecordGamePlayParams): Promise<void> {
+  try {
+    const sql = getSql();
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format for DB
+
+    // Update daily stats (upsert)
+    await sql`
+      INSERT INTO daily_game_stats (date, game_mode, plays, wins, surrenders, total_score)
+      VALUES (
+        ${today},
+        ${params.gameMode},
+        1,
+        ${params.won ? 1 : 0},
+        ${params.surrendered ? 1 : 0},
+        ${params.score}
+      )
+      ON CONFLICT (date, game_mode)
+      DO UPDATE SET
+        plays = daily_game_stats.plays + 1,
+        wins = daily_game_stats.wins + ${params.won ? 1 : 0},
+        surrenders = daily_game_stats.surrenders + ${params.surrendered ? 1 : 0},
+        total_score = daily_game_stats.total_score + ${params.score},
+        updated_at = CURRENT_TIMESTAMP
+    `;
+
+    // Add to leaderboard if it's a win (for guess games) or any play (for versus)
+    if (params.won || params.gameMode === 'versus') {
+      await sql`
+        INSERT INTO leaderboard (game_mode, score, session_id, target_id, target_date)
+        VALUES (
+          ${params.gameMode},
+          ${params.score},
+          ${params.sessionId || null},
+          ${params.targetId || null},
+          ${params.targetDate || null}
+        )
+      `;
+
+      // Prune leaderboard to keep only top 100 per game mode
+      // For guess games, lower score is better; for versus, higher is better
+      const isLowerBetter = params.gameMode !== 'versus';
+
+      if (isLowerBetter) {
+        await sql`
+          DELETE FROM leaderboard
+          WHERE game_mode = ${params.gameMode}
+          AND id NOT IN (
+            SELECT id FROM leaderboard
+            WHERE game_mode = ${params.gameMode}
+            ORDER BY score ASC, created_at DESC
+            LIMIT 100
+          )
+        `;
+      } else {
+        await sql`
+          DELETE FROM leaderboard
+          WHERE game_mode = ${params.gameMode}
+          AND id NOT IN (
+            SELECT id FROM leaderboard
+            WHERE game_mode = ${params.gameMode}
+            ORDER BY score DESC, created_at DESC
+            LIMIT 100
+          )
+        `;
+      }
+    }
+  } catch (error) {
+    console.error('Error recording game play:', error);
+    // Don't throw - analytics failures shouldn't break the game
+  }
+}
+
+/**
+ * Get leaderboard for a game mode
+ */
+export async function getLeaderboard(gameMode: GameMode, limit: number = 10): Promise<LeaderboardEntry[]> {
+  try {
+    const sql = getSql();
+    const isLowerBetter = gameMode !== 'versus';
+
+    let results;
+    if (isLowerBetter) {
+      results = await sql`
+        SELECT
+          id,
+          game_mode as "gameMode",
+          score,
+          player_name as "playerName",
+          session_id as "sessionId",
+          target_id as "targetId",
+          target_date as "targetDate",
+          created_at as "createdAt"
+        FROM leaderboard
+        WHERE game_mode = ${gameMode}
+        ORDER BY score ASC, created_at ASC
+        LIMIT ${limit}
+      ` as any[];
+    } else {
+      results = await sql`
+        SELECT
+          id,
+          game_mode as "gameMode",
+          score,
+          player_name as "playerName",
+          session_id as "sessionId",
+          target_id as "targetId",
+          target_date as "targetDate",
+          created_at as "createdAt"
+        FROM leaderboard
+        WHERE game_mode = ${gameMode}
+        ORDER BY score DESC, created_at ASC
+        LIMIT ${limit}
+      ` as any[];
+    }
+
+    return results as LeaderboardEntry[];
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error);
+    return [];
+  }
+}
+
+/**
+ * Update player name on a leaderboard entry
+ */
+export async function updateLeaderboardPlayerName(id: number, playerName: string): Promise<boolean> {
+  try {
+    const sql = getSql();
+    const results = await sql`
+      UPDATE leaderboard
+      SET player_name = ${playerName}
+      WHERE id = ${id}
+      RETURNING id
+    ` as any[];
+
+    return results.length > 0;
+  } catch (error) {
+    console.error('Error updating leaderboard player name:', error);
+    return false;
+  }
+}
+
+/**
+ * Get daily stats for a game mode (optional date range)
+ */
+export async function getDailyStats(
+  gameMode?: GameMode,
+  startDate?: string,
+  endDate?: string
+): Promise<DailyGameStats[]> {
+  try {
+    const sql = getSql();
+
+    let results;
+    if (gameMode && startDate && endDate) {
+      results = await sql`
+        SELECT
+          id,
+          date,
+          game_mode as "gameMode",
+          plays,
+          wins,
+          surrenders,
+          total_score as "totalScore"
+        FROM daily_game_stats
+        WHERE game_mode = ${gameMode}
+        AND date >= ${startDate}
+        AND date <= ${endDate}
+        ORDER BY date DESC
+      ` as any[];
+    } else if (gameMode) {
+      results = await sql`
+        SELECT
+          id,
+          date,
+          game_mode as "gameMode",
+          plays,
+          wins,
+          surrenders,
+          total_score as "totalScore"
+        FROM daily_game_stats
+        WHERE game_mode = ${gameMode}
+        ORDER BY date DESC
+        LIMIT 30
+      ` as any[];
+    } else {
+      results = await sql`
+        SELECT
+          id,
+          date,
+          game_mode as "gameMode",
+          plays,
+          wins,
+          surrenders,
+          total_score as "totalScore"
+        FROM daily_game_stats
+        ORDER BY date DESC
+        LIMIT 100
+      ` as any[];
+    }
+
+    return results as DailyGameStats[];
+  } catch (error) {
+    console.error('Error fetching daily stats:', error);
+    return [];
+  }
+}
+
+/**
+ * Get aggregate stats summary for all game modes
+ */
+export async function getStatsSummary(): Promise<{
+  gameMode: GameMode;
+  totalPlays: number;
+  totalWins: number;
+  avgScore: number;
+}[]> {
+  try {
+    const sql = getSql();
+    const results = await sql`
+      SELECT
+        game_mode as "gameMode",
+        SUM(plays) as "totalPlays",
+        SUM(wins) as "totalWins",
+        CASE WHEN SUM(plays) > 0 THEN ROUND(SUM(total_score)::numeric / SUM(plays), 2) ELSE 0 END as "avgScore"
+      FROM daily_game_stats
+      GROUP BY game_mode
+      ORDER BY game_mode
+    ` as any[];
+
+    return results.map((r: any) => ({
+      gameMode: r.gameMode as GameMode,
+      totalPlays: parseInt(r.totalPlays) || 0,
+      totalWins: parseInt(r.totalWins) || 0,
+      avgScore: parseFloat(r.avgScore) || 0,
+    }));
+  } catch (error) {
+    console.error('Error fetching stats summary:', error);
+    return [];
   }
 }

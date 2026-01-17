@@ -1,11 +1,32 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react';
-import type { Player, GuessThePlayerGameState, PlayerGuess, ComparisonResult } from '@/lib/types';
+import type { Player, GuessThePlayerGameState, PlayerGuess, ComparisonResult, GameMode } from '@/lib/types';
 import PlayerAutocomplete, { PlayerAutocompleteRef } from './PlayerAutocomplete';
 import GuessResult from './GuessResult';
 import GuessGameOver from './GuessGameOver';
 import playersData from '@/app/data/players.json';
+
+// Record game play stats to the server
+async function recordStats(params: {
+  gameMode: GameMode;
+  won: boolean;
+  score: number;
+  surrendered?: boolean;
+  targetId?: number;
+  targetDate?: string;
+}) {
+  try {
+    await fetch('/api/stats/record', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+  } catch (error) {
+    // Silently fail - analytics shouldn't break the game
+    console.error('Failed to record stats:', error);
+  }
+}
 
 // Data stored in localStorage for completed games
 export interface CompletionData {
@@ -176,9 +197,19 @@ function GuessThePlayerGame({ playerId, scheduleDate, previousCompletion, onComp
       won: isWin,
     });
 
-    // Notify parent that game is complete
+    // Notify parent that game is complete and record stats
     if (isGameOver) {
       onComplete({ guessCount: newGuesses.length, won: isWin });
+
+      // Record analytics
+      recordStats({
+        gameMode: scheduleDate ? 'guess_player_scheduled' : 'guess_player_random',
+        won: isWin,
+        score: newGuesses.length,
+        surrendered: false,
+        targetId: playerId,
+        targetDate: scheduleDate ?? undefined,
+      });
     }
 
     // Auto-focus the input after submitting a guess (if not game over and on larger screens)
@@ -207,6 +238,16 @@ function GuessThePlayerGame({ playerId, scheduleDate, previousCompletion, onComp
 
     // Notify parent that game is complete
     onComplete(completionData);
+
+    // Record analytics
+    recordStats({
+      gameMode: scheduleDate ? 'guess_player_scheduled' : 'guess_player_random',
+      won: false,
+      score: gameState.guesses.length,
+      surrendered: true,
+      targetId: playerId,
+      targetDate: scheduleDate ?? undefined,
+    });
   };
 
   if (!gameState.targetPlayer) {

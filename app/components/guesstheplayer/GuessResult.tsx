@@ -1,6 +1,7 @@
 'use client'
 
 import type { PlayerGuess, ComparisonResult } from '@/lib/types';
+import { getPositionLabel } from '@/lib/position-mappings';
 
 interface GuessResultProps {
   guess: PlayerGuess;
@@ -72,18 +73,6 @@ function StatCell({ label, value, comparison }: StatCellProps) {
 function GuessResult({ guess, index, isAnswer = false }: GuessResultProps) {
   const { player, comparisons } = guess;
 
-  // Get position label from category
-  const getPositionLabel = (category?: string): string => {
-    if (!category) return 'N/A';
-    const labels: Record<string, string> = {
-      'GOL': 'Arquero',
-      'DEF': 'Defensa',
-      'MED': 'Mediocampista',
-      'ATA': 'Delantero',
-    };
-    return labels[category] || category;
-  };
-
   return (
     <div className={`w-full rounded-lg p-2 border mb-2 animate-slide-down ${
       isAnswer
@@ -101,7 +90,8 @@ function GuessResult({ guess, index, isAnswer = false }: GuessResultProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-1">
+      {/* Top row: Text fields (5 columns) */}
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-1 mb-1">
         <StatCell
           label="País"
           value={player.country}
@@ -123,6 +113,15 @@ function GuessResult({ guess, index, isAnswer = false }: GuessResultProps) {
           comparison={comparisons.birthDate}
         />
         <StatCell
+          label="Proviene"
+          value={player.originClub}
+          comparison={comparisons.originClub}
+        />
+      </div>
+
+      {/* Bottom row: Numerical fields (4 columns, stretched to match top row width) */}
+      <div className="grid grid-cols-4 gap-1">
+        <StatCell
           label="Debut"
           value={player.debutYear}
           comparison={comparisons.debutYear}
@@ -136,11 +135,6 @@ function GuessResult({ guess, index, isAnswer = false }: GuessResultProps) {
           label="Goles"
           value={player.stats.totalGoals}
           comparison={comparisons.totalGoals}
-        />
-        <StatCell
-          label="Proviene"
-          value={player.originClub}
-          comparison={comparisons.originClub}
         />
         <StatCell
           label="Títulos"
