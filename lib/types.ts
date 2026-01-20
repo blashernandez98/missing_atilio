@@ -9,10 +9,14 @@ export interface Partido {
   torneo: string
 }
 
+// Player positions mapping: position number (1-11) to player name
+export type PlayerPositions = { [key: number]: string };
+
 export interface Cronograma {
   liveDate: string
   formation: string
   gameIndex: number
+  playerPositions?: PlayerPositions // Custom player positions (swapped from original)
 }
 
 export interface CronogramaDB {
@@ -20,6 +24,7 @@ export interface CronogramaDB {
   live_date: string
   formation: string
   game_index: number
+  player_positions: PlayerPositions | null
   created_at: Date
   updated_at: Date
 }
@@ -28,6 +33,7 @@ export interface CronogramaCreate {
   live_date: string
   formation: string
   game_index: number
+  player_positions?: PlayerPositions
 }
 
 export interface PlayerSchedule {

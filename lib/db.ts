@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless';
-import { Cronograma, CronogramaDB, CronogramaCreate, PlayerSchedule, PlayerScheduleDB, PlayerScheduleCreate, GameMode, DailyGameStats, LeaderboardEntry, RecordGamePlayParams, RecordGamePlayResult } from './types';
+import { Cronograma, CronogramaDB, CronogramaCreate, PlayerSchedule, PlayerScheduleDB, PlayerScheduleCreate, GameMode, DailyGameStats, LeaderboardEntry, RecordGamePlayParams, RecordGamePlayResult, PlayerPositions } from './types';
 import { getTomorrowStringUruguay, getTodayStringUruguay } from './date';
 
 const getSql = () => {
@@ -26,6 +26,7 @@ export async function getCronogramaAll(): Promise<Cronograma[]> {
         live_date as "liveDate",
         formation,
         game_index as "gameIndex",
+        player_positions as "playerPositions",
         created_at,
         updated_at
       FROM cronograma
@@ -35,7 +36,8 @@ export async function getCronogramaAll(): Promise<Cronograma[]> {
     return results.map((row: any) => ({
       liveDate: row.liveDate,
       formation: row.formation,
-      gameIndex: row.gameIndex
+      gameIndex: row.gameIndex,
+      playerPositions: row.playerPositions || undefined
     }));
   } catch (error) {
     console.error('Error fetching all cronograma:', error);
@@ -56,6 +58,7 @@ export async function getCronogramaAllWithMetadata(): Promise<CronogramaDB[]> {
         live_date,
         formation,
         game_index,
+        player_positions,
         created_at,
         updated_at
       FROM cronograma
@@ -79,7 +82,8 @@ export async function getCronogramaByDate(date: string): Promise<Cronograma | nu
       SELECT
         live_date as "liveDate",
         formation,
-        game_index as "gameIndex"
+        game_index as "gameIndex",
+        player_positions as "playerPositions"
       FROM cronograma
       WHERE TRIM(live_date) = TRIM(${date})
       LIMIT 1
@@ -89,7 +93,13 @@ export async function getCronogramaByDate(date: string): Promise<Cronograma | nu
       return null;
     }
 
-    return results[0] as Cronograma;
+    const row = results[0];
+    return {
+      liveDate: row.liveDate,
+      formation: row.formation,
+      gameIndex: row.gameIndex,
+      playerPositions: row.playerPositions || undefined
+    };
   } catch (error) {
     console.error('Error fetching cronograma by date:', error);
     throw error;
@@ -108,6 +118,7 @@ export async function getCronogramaById(id: number): Promise<CronogramaDB | null
         live_date,
         formation,
         game_index,
+        player_positions,
         created_at,
         updated_at
       FROM cronograma
@@ -133,14 +144,16 @@ export async function getCronogramaById(id: number): Promise<CronogramaDB | null
 export async function createCronograma(data: CronogramaCreate): Promise<CronogramaDB> {
   try {
     const sql = getSql();
+    const playerPositionsJson = data.player_positions ? JSON.stringify(data.player_positions) : null;
     const results = await sql`
-      INSERT INTO cronograma (live_date, formation, game_index)
-      VALUES (${data.live_date}, ${data.formation}, ${data.game_index})
+      INSERT INTO cronograma (live_date, formation, game_index, player_positions)
+      VALUES (${data.live_date}, ${data.formation}, ${data.game_index}, ${playerPositionsJson}::jsonb)
       RETURNING
         id,
         live_date,
         formation,
         game_index,
+        player_positions,
         created_at,
         updated_at
     ` as any[];
@@ -158,28 +171,27 @@ export async function createCronograma(data: CronogramaCreate): Promise<Cronogra
 export async function updateCronograma(id: number, data: Partial<CronogramaCreate>): Promise<CronogramaDB> {
   try {
     const sql = getSql();
-    const updates = [];
-    const values = [];
+    const setClauses: string[] = [];
 
     if (data.live_date !== undefined) {
-      updates.push('live_date');
-      values.push(data.live_date);
+      setClauses.push(`live_date = '${data.live_date}'`);
     }
     if (data.formation !== undefined) {
-      updates.push('formation');
-      values.push(data.formation);
+      setClauses.push(`formation = '${data.formation}'`);
     }
     if (data.game_index !== undefined) {
-      updates.push('game_index');
-      values.push(data.game_index);
+      setClauses.push(`game_index = ${data.game_index}`);
+    }
+    if (data.player_positions !== undefined) {
+      const positionsJson = JSON.stringify(data.player_positions);
+      setClauses.push(`player_positions = '${positionsJson}'::jsonb`);
     }
 
-    if (updates.length === 0) {
+    if (setClauses.length === 0) {
       throw new Error('No fields to update');
     }
 
-    // Build dynamic UPDATE query
-    const setClause = updates.map((field, i) => `${field} = $${i + 1}`).join(', ');
+    const setClause = setClauses.join(', ');
 
     const results = await sql`
       UPDATE cronograma
@@ -190,6 +202,7 @@ export async function updateCronograma(id: number, data: Partial<CronogramaCreat
         live_date,
         formation,
         game_index,
+        player_positions,
         created_at,
         updated_at
     ` as any[];
@@ -295,7 +308,7 @@ export function isValidDateFormat(dateString: string): boolean {
  * Validate formation string
  */
 export function isValidFormation(formation: string): boolean {
-  const validFormations = ['4-4-2', '4-2-3-1', '4-2-4', '4-1-2-2-1', '4-3-3'];
+  const validFormations = ['4-4-2', '4-2-3-1', '4-2-4', '4-1-2-2-1', '4-3-3', '4-3-3-ofensivo'];
   return validFormations.includes(formation);
 }
 
@@ -674,14 +687,35 @@ export async function recordGamePlay(params: RecordGamePlayParams): Promise<Reco
 
 /**
  * Get leaderboard for a game mode
+ *
+ * For 'versus' and 'guess_player_random': returns top N entries overall
+ * For 'wordle' and 'guess_player_scheduled': returns the best entry per date (one champion per scheduled game)
  */
 export async function getLeaderboard(gameMode: GameMode, limit: number = 10): Promise<LeaderboardEntry[]> {
   try {
     const sql = getSql();
-    const isLowerBetter = gameMode !== 'versus';
 
     let results;
-    if (isLowerBetter) {
+
+    if (gameMode === 'versus') {
+      // Versus: top N overall, higher score is better
+      results = await sql`
+        SELECT
+          id,
+          game_mode as "gameMode",
+          score,
+          player_name as "playerName",
+          session_id as "sessionId",
+          target_id as "targetId",
+          target_date as "targetDate",
+          created_at as "createdAt"
+        FROM leaderboard
+        WHERE game_mode = ${gameMode}
+        ORDER BY score DESC, created_at ASC
+        LIMIT ${limit}
+      ` as any[];
+    } else if (gameMode === 'guess_player_random') {
+      // Random mode: top N overall, lower score is better
       results = await sql`
         SELECT
           id,
@@ -698,8 +732,10 @@ export async function getLeaderboard(gameMode: GameMode, limit: number = 10): Pr
         LIMIT ${limit}
       ` as any[];
     } else {
+      // Wordle and guess_player_scheduled: one champion per date (best score per target_date)
+      // Uses DISTINCT ON to get the best entry for each date
       results = await sql`
-        SELECT
+        SELECT DISTINCT ON (target_date)
           id,
           game_mode as "gameMode",
           score,
@@ -710,7 +746,8 @@ export async function getLeaderboard(gameMode: GameMode, limit: number = 10): Pr
           created_at as "createdAt"
         FROM leaderboard
         WHERE game_mode = ${gameMode}
-        ORDER BY score DESC, created_at ASC
+        AND target_date IS NOT NULL
+        ORDER BY target_date DESC, score ASC, created_at ASC
         LIMIT ${limit}
       ` as any[];
     }
@@ -810,6 +847,7 @@ export async function getDailyStats(
 
 /**
  * Get aggregate stats summary for all game modes
+ * Note: Aggregation done in JS due to Neon serverless caching issues with SQL GROUP BY
  */
 export async function getStatsSummary(): Promise<{
   gameMode: GameMode;
@@ -819,25 +857,60 @@ export async function getStatsSummary(): Promise<{
 }[]> {
   try {
     const sql = getSql();
+    // Fetch raw data and aggregate in JavaScript to avoid Neon caching issues
     const results = await sql`
       SELECT
-        game_mode as "gameMode",
-        SUM(plays) as "totalPlays",
-        SUM(wins) as "totalWins",
-        CASE WHEN SUM(plays) > 0 THEN ROUND(SUM(total_score)::numeric / SUM(plays), 2) ELSE 0 END as "avgScore"
+        game_mode,
+        plays,
+        wins,
+        total_score
       FROM daily_game_stats
-      GROUP BY game_mode
-      ORDER BY game_mode
     ` as any[];
 
-    return results.map((r: any) => ({
-      gameMode: r.gameMode as GameMode,
-      totalPlays: parseInt(r.totalPlays) || 0,
-      totalWins: parseInt(r.totalWins) || 0,
-      avgScore: parseFloat(r.avgScore) || 0,
-    }));
+    // Aggregate by game_mode in JavaScript
+    const aggregated: Record<string, { totalPlays: number; totalWins: number; totalScore: number }> = {};
+
+    for (const row of results) {
+      const mode = row.game_mode;
+      if (!aggregated[mode]) {
+        aggregated[mode] = { totalPlays: 0, totalWins: 0, totalScore: 0 };
+      }
+      aggregated[mode].totalPlays += row.plays || 0;
+      aggregated[mode].totalWins += row.wins || 0;
+      aggregated[mode].totalScore += row.total_score || 0;
+    }
+
+    // Convert to array format
+    return Object.entries(aggregated)
+      .map(([gameMode, stats]) => ({
+        gameMode: gameMode as GameMode,
+        totalPlays: stats.totalPlays,
+        totalWins: stats.totalWins,
+        avgScore: stats.totalPlays > 0
+          ? Math.round((stats.totalScore / stats.totalPlays) * 100) / 100
+          : 0,
+      }))
+      .sort((a, b) => a.gameMode.localeCompare(b.gameMode));
   } catch (error) {
     console.error('Error fetching stats summary:', error);
+    return [];
+  }
+}
+
+/**
+ * Debug function: Get raw daily stats without aggregation
+ */
+export async function getRawDailyStats(): Promise<any[]> {
+  try {
+    const sql = getSql();
+    const results = await sql`
+      SELECT *
+      FROM daily_game_stats
+      ORDER BY date DESC, game_mode
+    ` as any[];
+    return results;
+  } catch (error) {
+    console.error('Error fetching raw daily stats:', error);
     return [];
   }
 }

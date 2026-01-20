@@ -10,6 +10,7 @@ interface AdminFieldProps {
   match: Partido | null;
   formation: string;
   onLineupChange?: (newLineup: { [key: number]: string }) => void;
+  initialLineup?: { [key: number]: string } | null; // Custom lineup for editing
 }
 
 interface AdminPlayerProps {
@@ -69,20 +70,25 @@ function AdminPlayer({ position, locationX, locationY, playerName, isSelected, o
   );
 }
 
-function AdminField({ match, formation, onLineupChange }: AdminFieldProps) {
+function AdminField({ match, formation, onLineupChange, initialLineup }: AdminFieldProps) {
   const coordenadas: Formation = Formaciones[formation] || Formaciones['4-4-2'];
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
   const [currentLineup, setCurrentLineup] = useState<{ [key: number]: string }>(
     match?.equipo || {}
   );
 
-  // Update lineup when match changes
+  // Update lineup when match or initialLineup changes
   React.useEffect(() => {
     if (match) {
-      setCurrentLineup(match.equipo);
+      // Use initialLineup if provided (for editing), otherwise use match.equipo
+      if (initialLineup && Object.keys(initialLineup).length > 0) {
+        setCurrentLineup(initialLineup);
+      } else {
+        setCurrentLineup(match.equipo);
+      }
       setSelectedPosition(null);
     }
-  }, [match]);
+  }, [match, initialLineup]);
 
   const handlePlayerClick = (position: number) => {
     if (selectedPosition === null) {

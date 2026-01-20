@@ -131,7 +131,18 @@ function App() {
   useEffect(() => {
     if (!currentGame) return;
 
-    const partidoElegido = partidos_data[currentGame.gameIndex];
+    const originalPartido = partidos_data[currentGame.gameIndex];
+
+    // Apply custom player positions if available
+    let partidoElegido = originalPartido;
+    if (currentGame.playerPositions && Object.keys(currentGame.playerPositions).length > 0) {
+      // Create a modified partido with custom player positions
+      partidoElegido = {
+        ...originalPartido,
+        equipo: currentGame.playerPositions as { [key: string]: string }
+      };
+    }
+
     setPartido(partidoElegido);
     const playerLastName = partidoElegido["equipo"][currentPlayer]
       .trim()
@@ -144,11 +155,22 @@ function App() {
     if (savedState) {
       try {
         const parsed = JSON.parse(savedState);
+        const loadedSolved = parsed.solved || defaultAppContext.solved;
+        const isCompleted = Object.keys(loadedSolved).length === 11;
+
         setGuesses(parsed.guesses || defaultAppContext.guesses);
-        setSolved(parsed.solved || defaultAppContext.solved);
+        setSolved(loadedSolved);
         setCurrentPlayer(parsed.currentPlayer || 2);
         setFieldMode(parsed.fieldMode !== undefined ? parsed.fieldMode : true);
-        setGameOver(parsed.gameOver || false);
+
+        // For completed games, don't show modals - just show the field with guesses
+        if (isCompleted) {
+          setGameOver(false); // Don't show GameOver modal
+          setInfoCard(false); // Don't show InfoCard modal
+        } else {
+          setGameOver(parsed.gameOver || false);
+          setInfoCard(true); // Show info for incomplete games
+        }
       } catch (error) {
         console.error('Error loading saved game state:', error);
         // Reset to default on error
@@ -272,7 +294,7 @@ function App() {
     if (newGameDate > todayDate) return;
 
     setCurrentGame(newGame);
-    setInfoCard(true); // Show info modal when navigating to a different game
+    // InfoCard visibility is handled in the load effect based on completion status
   }
 
   return (
@@ -324,9 +346,15 @@ function App() {
                 >
                   ◀
                 </button>
-                <span className='text-white/80 text-sm sm:text-base font-semibold'>
-                  {currentGame.liveDate}
-                </span>
+                <div className='flex items-center gap-2'>
+                  <span className='text-white/80 text-sm sm:text-base font-semibold'>
+                    {currentGame.liveDate}
+                  </span>
+                  {/* Green check for completed games */}
+                  {Object.keys(solved).length === 11 && (
+                    <span className='text-green-400 text-lg' title='Completado'>✓</span>
+                  )}
+                </div>
                 <button
                   onClick={() => navigateGame('next')}
                   className='text-white/60 hover:text-white transition-colors text-lg sm:text-xl disabled:opacity-30 disabled:cursor-not-allowed'

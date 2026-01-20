@@ -16,6 +16,9 @@ interface ControlPanelProps {
   onSave: () => void;
   schedules: CronogramaDB[];
   onDeleteSchedule: (id: number) => void;
+  onEditSchedule: (schedule: CronogramaDB) => void;
+  onCancelEdit: () => void;
+  editingScheduleId: number | null;
   isSaving: boolean;
   allMatches: Partido[];
 }
@@ -31,6 +34,9 @@ function ControlPanel({
   onSave,
   schedules,
   onDeleteSchedule,
+  onEditSchedule,
+  onCancelEdit,
+  editingScheduleId,
   isSaving,
   allMatches
 }: ControlPanelProps) {
@@ -137,18 +143,46 @@ function ControlPanel({
         </p>
       </div>
 
-      {/* Save Button */}
-      <button
-        onClick={onSave}
-        disabled={!canSave || isSaving}
-        className={`font-bold py-3 px-4 rounded-md transition-all ${
-          canSave && !isSaving
-            ? 'bg-green-600 hover:bg-green-700 text-white'
-            : 'bg-slate-700 text-slate-500 cursor-not-allowed'
-        }`}
-      >
-        {isSaving ? '⏳ Guardando...' : '💾 Guardar / Programar'}
-      </button>
+      {/* Editing Mode Indicator */}
+      {editingScheduleId !== null && (
+        <div className="bg-yellow-600/20 border border-yellow-500 rounded-lg p-3 text-center">
+          <p className="text-yellow-400 font-semibold text-sm">
+            ✏️ Modo Edición
+          </p>
+          <p className="text-yellow-300/70 text-xs mt-1">
+            Modificando partido programado
+          </p>
+        </div>
+      )}
+
+      {/* Save/Cancel Buttons */}
+      <div className="flex gap-2">
+        {editingScheduleId !== null && (
+          <button
+            onClick={onCancelEdit}
+            className="flex-1 bg-slate-600 hover:bg-slate-500 text-white font-bold py-3 px-4 rounded-md transition-all"
+          >
+            ❌ Cancelar
+          </button>
+        )}
+        <button
+          onClick={onSave}
+          disabled={!canSave || isSaving}
+          className={`flex-1 font-bold py-3 px-4 rounded-md transition-all ${
+            canSave && !isSaving
+              ? editingScheduleId !== null
+                ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                : 'bg-green-600 hover:bg-green-700 text-white'
+              : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+          }`}
+        >
+          {isSaving
+            ? '⏳ Guardando...'
+            : editingScheduleId !== null
+            ? '✏️ Actualizar'
+            : '💾 Programar'}
+        </button>
+      </div>
 
       {/* Scheduled Matches List */}
       <div className="flex flex-col gap-2 bg-slate-800 rounded-lg p-4">
@@ -164,14 +198,23 @@ function ControlPanel({
           <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
             {[...schedules].reverse().map((schedule) => {
               const match = allMatches[schedule.game_index];
+              const isEditing = editingScheduleId === schedule.id;
+              const hasCustomPositions = schedule.player_positions && Object.keys(schedule.player_positions).length > 0;
               return (
                 <div
                   key={schedule.id}
-                  className="flex justify-between items-center bg-slate-700 rounded p-2 text-sm"
+                  className={`flex justify-between items-center rounded p-2 text-sm ${
+                    isEditing ? 'bg-yellow-600/30 border border-yellow-500' : 'bg-slate-700'
+                  }`}
                 >
                   <div className="flex flex-col">
-                    <span className="text-slate-50 font-semibold">
+                    <span className="text-slate-50 font-semibold flex items-center gap-2">
                       {schedule.live_date}
+                      {hasCustomPositions && (
+                        <span className="text-cyan-400 text-xs" title="Posiciones personalizadas">
+                          🔄
+                        </span>
+                      )}
                     </span>
                     {match && (
                       <span className="text-slate-300 text-xs">
@@ -182,13 +225,26 @@ function ControlPanel({
                       {schedule.formation} | Partido #{schedule.game_index}
                     </span>
                   </div>
-                  <button
-                    onClick={() => onDeleteSchedule(schedule.id)}
-                    className="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded text-xs transition-all"
-                    title="Eliminar"
-                  >
-                    🗑️
-                  </button>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => onEditSchedule(schedule)}
+                      className={`${
+                        isEditing
+                          ? 'bg-yellow-600 hover:bg-yellow-700'
+                          : 'bg-blue-600 hover:bg-blue-700'
+                      } text-white font-bold px-3 py-1 rounded text-xs transition-all`}
+                      title="Editar"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => onDeleteSchedule(schedule.id)}
+                      className="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded text-xs transition-all"
+                      title="Eliminar"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
               );
             })}

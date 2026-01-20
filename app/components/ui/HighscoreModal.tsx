@@ -105,7 +105,7 @@ function HighscoreModal({ isOpen, onClose, entryId, score, rank, gameMode }: Hig
             {/* Name Input */}
             <div className="w-full mb-4">
               <label className="block text-sm text-white/80 mb-2 text-center">
-                Ingresa tu nombre para el ranking:
+                Escribí tu nombre para el ranking:
               </label>
               <input
                 type="text"

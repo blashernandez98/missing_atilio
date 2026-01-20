@@ -12,12 +12,9 @@ function GameModeSelector() {
       {/* Game Mode Selection */}
       <div className='flex-grow flex items-start justify-center px-4 pt-12 pb-8'>
         <div className='max-w-4xl w-full'>
-          <h2 className='text-white text-3xl sm:text-4xl font-bold text-center mb-4'>
-            Elegí tu juego
+          <h2 className='text-white text-2xl sm:text-2xl font-bold text-center mb-8'>
+            Modos de juego
           </h2>
-          <p className='text-white/70 text-center mb-12 text-lg'>
-            ¿Qué querés jugar hoy?
-          </p>
 
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8'>
             {/* Missing Atilio (Wordle) */}
@@ -35,11 +32,11 @@ function GameModeSelector() {
               '>
                 <div className='flex flex-col items-center text-center h-full'>
                   <div className='text-6xl mb-4'>⚽</div>
-                  <h3 className='text-2xl font-bold text-white mb-3'>
+                  <h3 className='text-xl font-bold text-white mb-6'>
                     Missing Atilio
                   </h3>
                   <p className='text-white/70 text-sm mb-4 flex-grow'>
-                    Adiviná los 11 jugadores del partido histórico del día
+                    Adiviná los 11 jugadores del partido del día
                   </p>
                   <div className='flex items-center gap-2 text-blue-400 font-semibold group-hover:gap-3 transition-all'>
                     <span>Jugar</span>
@@ -64,11 +61,11 @@ function GameModeSelector() {
               '>
                 <div className='flex flex-col items-center text-center h-full'>
                   <div className='text-6xl mb-4'>⚔️</div>
-                  <h3 className='text-2xl font-bold text-white mb-3'>
-                    ¿Quién tiene más?
+                  <h3 className='text-xl font-bold text-white mb-6'>
+                    ¿Más o Menos?
                   </h3>
                   <p className='text-white/70 text-sm mb-4 flex-grow'>
-                    Compará las estadísticas de los jugadores tricolores
+                    Compará las estadísticas de dos jugadores
                   </p>
                   <div className='flex items-center gap-2 text-cyan-400 font-semibold group-hover:gap-3 transition-all'>
                     <span>Jugar</span>
@@ -93,7 +90,7 @@ function GameModeSelector() {
               '>
                 <div className='flex flex-col items-center text-center h-full'>
                   <div className='text-6xl mb-4'>🔍</div>
-                  <h3 className='text-2xl font-bold text-white mb-3'>
+                  <h3 className='text-xl font-bold text-white mb-6'>
                     Adivina el Jugador
                   </h3>
                   <p className='text-white/70 text-sm mb-4 flex-grow'>

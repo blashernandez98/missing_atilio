@@ -38,12 +38,12 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/cronograma
  * Creates a new scheduled match
- * Body: { live_date: string, formation: string, game_index: number }
+ * Body: { live_date: string, formation: string, game_index: number, player_positions?: object }
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { live_date, formation, game_index } = body;
+    const { live_date, formation, game_index, player_positions } = body;
 
     // Validation
     if (!live_date || !formation || game_index === undefined) {
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            'Invalid formation. Must be one of: 4-4-2, 4-2-3-1, 4-2-4, 4-1-2-2-1'
+            'Invalid formation. Must be one of: 4-4-2, 4-2-3-1, 4-2-4, 4-1-2-2-1, 4-3-3, 4-3-3-ofensivo'
         },
         { status: 400 }
       );
@@ -80,10 +80,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate player_positions if provided (should be an object with position numbers as keys)
+    if (player_positions !== undefined && player_positions !== null) {
+      if (typeof player_positions !== 'object') {
+        return NextResponse.json(
+          { error: 'Invalid player_positions. Must be an object' },
+          { status: 400 }
+        );
+      }
+    }
+
     const cronogramaData: CronogramaCreate = {
       live_date,
       formation,
-      game_index
+      game_index,
+      player_positions: player_positions || undefined
     };
 
     const created = await createCronograma(cronogramaData);

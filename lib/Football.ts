@@ -68,4 +68,18 @@ export const Formaciones: Record<string, Formation> = {
     10: [3, 6],
     11: [5, 6],
   },
+  // 4-3-3 with center midfielder pushed forward (closer to attackers)
+  '4-3-3-ofensivo': {
+    1: [3, 1],
+    2: [1, 3],
+    3: [2, 2],
+    4: [4, 2],
+    5: [5, 3],
+    6: [2, 4],
+    7: [3, 5], // Center mid moved forward
+    8: [4, 4],
+    9: [1, 6],
+    10: [3, 6],
+    11: [5, 6],
+  },
 }

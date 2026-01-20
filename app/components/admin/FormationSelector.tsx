@@ -7,7 +7,7 @@ interface FormationSelectorProps {
   onChange: (formation: string) => void;
 }
 
-const AVAILABLE_FORMATIONS = ['4-4-2', '4-2-3-1', '4-2-4', '4-1-2-2-1', '4-3-3'];
+const AVAILABLE_FORMATIONS = ['4-4-2', '4-2-3-1', '4-2-4', '4-1-2-2-1', '4-3-3', '4-3-3-ofensivo'];
 
 function FormationSelector({ value, onChange }: FormationSelectorProps) {
   return (

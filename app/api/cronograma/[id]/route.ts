@@ -11,7 +11,7 @@ import { CronogramaCreate } from '@/lib/types';
 /**
  * PUT /api/cronograma/[id]
  * Updates an existing scheduled match
- * Body: { live_date?: string, formation?: string, game_index?: number }
+ * Body: { live_date?: string, formation?: string, game_index?: number, player_positions?: object }
  */
 export async function PUT(
   request: NextRequest,
@@ -37,7 +37,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { live_date, formation, game_index } = body;
+    const { live_date, formation, game_index, player_positions } = body;
 
     // Validate fields if provided
     if (live_date !== undefined && !isValidDateFormat(live_date)) {
@@ -51,7 +51,7 @@ export async function PUT(
       return NextResponse.json(
         {
           error:
-            'Invalid formation. Must be one of: 4-4-2, 4-2-3-1, 4-2-4, 4-1-2-2-1'
+            'Invalid formation. Must be one of: 4-4-2, 4-2-3-1, 4-2-4, 4-1-2-2-1, 4-3-3, 4-3-3-ofensivo'
         },
         { status: 400 }
       );
@@ -67,10 +67,21 @@ export async function PUT(
       );
     }
 
+    // Validate player_positions if provided
+    if (player_positions !== undefined && player_positions !== null) {
+      if (typeof player_positions !== 'object') {
+        return NextResponse.json(
+          { error: 'Invalid player_positions. Must be an object' },
+          { status: 400 }
+        );
+      }
+    }
+
     const updateData: Partial<CronogramaCreate> = {};
     if (live_date !== undefined) updateData.live_date = live_date;
     if (formation !== undefined) updateData.formation = formation;
     if (game_index !== undefined) updateData.game_index = game_index;
+    if (player_positions !== undefined) updateData.player_positions = player_positions;
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(

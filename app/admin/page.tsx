@@ -15,8 +15,15 @@ const GAME_MODE_LABELS: Record<GameMode, string> = {
   'guess_player_random': 'Adivina el Jugador (Aleatorio)',
 };
 
+interface StatsSummary {
+  gameMode: GameMode;
+  totalPlays: number;
+  totalWins: number;
+  avgScore: number;
+}
+
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'matches' | 'players' | 'leaderboard'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'players' | 'stats'>('matches');
 
   // Match scheduling state
   const [selectedMatch, setSelectedMatch] = useState<Partido | null>(null);
@@ -33,14 +40,15 @@ export default function AdminPage() {
   const [playerSchedules, setPlayerSchedules] = useState<PlayerScheduleDB[]>([]);
   const [isPlayerSaving, setIsPlayerSaving] = useState(false);
 
-  // Leaderboard state
+  // Stats state
   const [leaderboards, setLeaderboards] = useState<Record<GameMode, LeaderboardEntry[]>>({
     'wordle': [],
     'versus': [],
     'guess_player_scheduled': [],
     'guess_player_random': [],
   });
-  const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
+  const [statsSummary, setStatsSummary] = useState<StatsSummary[]>([]);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
 
   const partidos: Partido[] = partidosData as Partido[];
   const players: Player[] = playersData as Player[];
@@ -122,6 +130,9 @@ export default function AdminPage() {
     setModifiedLineup(newLineup);
   };
 
+  // State for editing existing schedules
+  const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null);
+
   const handleSave = async () => {
     if (!selectedMatch || !scheduleDate || !formation) {
       alert('Por favor completa todos los campos');
@@ -136,8 +147,13 @@ export default function AdminPage() {
     setIsSaving(true);
 
     try {
-      const res = await fetch('/api/cronograma', {
-        method: 'POST',
+      // Check if we're editing or creating
+      const isEditing = editingScheduleId !== null;
+      const url = isEditing ? `/api/cronograma/${editingScheduleId}` : '/api/cronograma';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -145,19 +161,22 @@ export default function AdminPage() {
           live_date: scheduleDate,
           formation: formation,
           game_index: selectedGameIndex,
+          player_positions: modifiedLineup || undefined,
         }),
       });
 
       if (res.ok) {
-        alert('✅ Partido programado exitosamente!');
+        alert(isEditing ? '✅ Partido actualizado exitosamente!' : '✅ Partido programado exitosamente!');
         // Refresh schedules (which will recalculate next available date)
         await fetchSchedules();
         // Clear selection
         setSelectedMatch(null);
         setSelectedGameIndex(null);
+        setModifiedLineup(null);
+        setEditingScheduleId(null);
       } else {
         const error = await res.json();
-        alert(`❌ Error: ${error.error || 'No se pudo programar el partido'}`);
+        alert(`❌ Error: ${error.error || 'No se pudo guardar el partido'}`);
       }
     } catch (error) {
       console.error('Error saving schedule:', error);
@@ -165,6 +184,38 @@ export default function AdminPage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Load an existing schedule for editing
+  const handleEditSchedule = (schedule: CronogramaDB) => {
+    const partido = partidos[schedule.game_index];
+    if (!partido) {
+      alert('Error: No se pudo encontrar el partido');
+      return;
+    }
+
+    setSelectedMatch(partido);
+    setSelectedGameIndex(schedule.game_index);
+    setFormation(schedule.formation);
+    setScheduleDate(schedule.live_date);
+    setEditingScheduleId(schedule.id);
+
+    // Load custom player positions if they exist
+    if (schedule.player_positions) {
+      setModifiedLineup(schedule.player_positions);
+    } else {
+      setModifiedLineup(null);
+    }
+  };
+
+  // Cancel editing and reset to new schedule mode
+  const handleCancelEdit = () => {
+    setSelectedMatch(null);
+    setSelectedGameIndex(null);
+    setModifiedLineup(null);
+    setEditingScheduleId(null);
+    // Recalculate next available date
+    setScheduleDate(calculateNextAvailableDate(schedules));
   };
 
   const handleDeleteSchedule = async (id: number) => {
@@ -290,21 +341,26 @@ export default function AdminPage() {
     return new Date(year, month - 1, day);
   };
 
-  // Fetch leaderboards for all game modes
-  const fetchLeaderboards = async () => {
-    setIsLoadingLeaderboard(true);
+  // Fetch stats and leaderboards for all game modes
+  const fetchStats = async () => {
+    setIsLoadingStats(true);
     try {
       const gameModes: GameMode[] = ['wordle', 'versus', 'guess_player_scheduled', 'guess_player_random'];
-      const results = await Promise.all(
-        gameModes.map(async (mode) => {
-          const res = await fetch(`/api/stats/leaderboard?gameMode=${mode}&limit=20`);
-          if (res.ok) {
-            const data = await res.json();
-            return { mode, data };
-          }
-          return { mode, data: [] };
-        })
-      );
+
+      // Fetch leaderboards and summary in parallel
+      const [leaderboardResults, summaryRes] = await Promise.all([
+        Promise.all(
+          gameModes.map(async (mode) => {
+            const res = await fetch(`/api/stats/leaderboard?gameMode=${mode}&limit=20`);
+            if (res.ok) {
+              const data = await res.json();
+              return { mode, data };
+            }
+            return { mode, data: [] };
+          })
+        ),
+        fetch('/api/stats/summary')
+      ]);
 
       const newLeaderboards: Record<GameMode, LeaderboardEntry[]> = {
         'wordle': [],
@@ -313,22 +369,27 @@ export default function AdminPage() {
         'guess_player_random': [],
       };
 
-      results.forEach(({ mode, data }) => {
+      leaderboardResults.forEach(({ mode, data }) => {
         newLeaderboards[mode] = data;
       });
 
       setLeaderboards(newLeaderboards);
+
+      if (summaryRes.ok) {
+        const summaryData = await summaryRes.json();
+        setStatsSummary(summaryData);
+      }
     } catch (error) {
-      console.error('Error fetching leaderboards:', error);
+      console.error('Error fetching stats:', error);
     } finally {
-      setIsLoadingLeaderboard(false);
+      setIsLoadingStats(false);
     }
   };
 
-  // Fetch leaderboards when tab is selected
+  // Fetch stats when tab is selected
   useEffect(() => {
-    if (activeTab === 'leaderboard') {
-      fetchLeaderboards();
+    if (activeTab === 'stats') {
+      fetchStats();
     }
   }, [activeTab]);
 
@@ -357,14 +418,14 @@ export default function AdminPage() {
           Programar Jugadores
         </button>
         <button
-          onClick={() => setActiveTab('leaderboard')}
+          onClick={() => setActiveTab('stats')}
           className={`px-6 py-3 rounded-lg font-bold transition-all ${
-            activeTab === 'leaderboard'
-              ? 'bg-yellow-600 text-white'
+            activeTab === 'stats'
+              ? 'bg-green-600 text-white'
               : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
           }`}
         >
-          Leaderboard
+          Estadísticas
         </button>
       </div>
 
@@ -376,6 +437,7 @@ export default function AdminPage() {
               match={selectedMatch}
               formation={formation}
               onLineupChange={handleLineupChange}
+              initialLineup={modifiedLineup}
             />
           </div>
           <div className="flex justify-center">
@@ -391,6 +453,9 @@ export default function AdminPage() {
                 onSave={handleSave}
                 schedules={schedules}
                 onDeleteSchedule={handleDeleteSchedule}
+                onEditSchedule={handleEditSchedule}
+                onCancelEdit={handleCancelEdit}
+                editingScheduleId={editingScheduleId}
                 isSaving={isSaving}
                 allMatches={partidos}
               />
@@ -492,28 +557,78 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Leaderboard */}
-      {activeTab === 'leaderboard' && (
+      {/* Stats */}
+      {activeTab === 'stats' && (
         <div className="max-w-6xl mx-auto w-full">
           <div className="flex flex-col gap-6 p-4 bg-slate-900 rounded-lg">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold text-slate-50">
-                Leaderboards
+                Estadísticas
               </h2>
               <button
-                onClick={fetchLeaderboards}
-                disabled={isLoadingLeaderboard}
+                onClick={fetchStats}
+                disabled={isLoadingStats}
                 className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white font-bold py-2 px-4 rounded-md transition-all"
               >
-                {isLoadingLeaderboard ? 'Cargando...' : 'Actualizar'}
+                {isLoadingStats ? 'Cargando...' : 'Actualizar'}
               </button>
             </div>
 
+            {/* Summary Stats */}
+            <div className="bg-slate-800 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-green-400 mb-4">
+                Resumen General
+              </h3>
+              {statsSummary.length === 0 ? (
+                <p className="text-slate-500 text-sm">No hay datos aún.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {(['wordle', 'versus', 'guess_player_scheduled', 'guess_player_random'] as GameMode[]).map((mode) => {
+                    const stats = statsSummary.find(s => s.gameMode === mode);
+                    const winRate = stats && stats.totalPlays > 0
+                      ? ((stats.totalWins / stats.totalPlays) * 100).toFixed(1)
+                      : '0';
+                    const isVersus = mode === 'versus';
+                    return (
+                      <div key={mode} className="bg-slate-700 rounded-lg p-3">
+                        <h4 className="text-sm font-semibold text-slate-300 mb-2 truncate">
+                          {GAME_MODE_LABELS[mode]}
+                        </h4>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Partidas:</span>
+                            <span className="text-white font-bold">{stats?.totalPlays || 0}</span>
+                          </div>
+                          {!isVersus && (
+                            <>
+                              <div className="flex justify-between">
+                                <span className="text-slate-400">Victorias:</span>
+                                <span className="text-green-400 font-bold">{stats?.totalWins || 0}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-slate-400">% Victoria:</span>
+                                <span className="text-cyan-400 font-bold">{winRate}%</span>
+                              </div>
+                            </>
+                          )}
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">{isVersus ? 'Prom. Racha:' : 'Prom. Score:'}</span>
+                            <span className="text-yellow-400 font-bold">{stats?.avgScore.toFixed(1) || 0}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Leaderboards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {(['versus', 'wordle', 'guess_player_scheduled', 'guess_player_random'] as GameMode[]).map((mode) => (
                 <div key={mode} className="bg-slate-800 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-yellow-400 mb-3">
-                    {GAME_MODE_LABELS[mode]}
+                    🏆 {GAME_MODE_LABELS[mode]}
                   </h3>
                   <p className="text-xs text-slate-400 mb-2">
                     {mode === 'versus' ? 'Mayor racha = mejor' : 'Menos intentos = mejor'}
