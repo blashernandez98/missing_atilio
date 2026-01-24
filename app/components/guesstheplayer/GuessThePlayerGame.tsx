@@ -7,6 +7,8 @@ import GuessResult from './GuessResult';
 import GuessGameOver from './GuessGameOver';
 import HighscoreModal from '../ui/HighscoreModal';
 import playersData from '@/app/data/players.json';
+import { useAuth } from '@/contexts/AuthContext';
+import { recordGameCompletion } from '@/lib/guest-session';
 
 interface RecordStatsResult {
   isHighscore: boolean;
@@ -58,6 +60,8 @@ interface GuessThePlayerGameProps {
 }
 
 function GuessThePlayerGame({ playerId, scheduleDate, previousCompletion, onComplete, onPlayAgain }: GuessThePlayerGameProps) {
+  const { user, refreshStreaks } = useAuth();
+  const userCompletionRecordedRef = useRef<boolean>(false);
   const players: Player[] = playersData as Player[];
   const autocompleteRef = useRef<PlayerAutocompleteRef>(null);
 
@@ -245,6 +249,22 @@ function GuessThePlayerGame({ playerId, scheduleDate, previousCompletion, onComp
           });
         }
       });
+
+      // Record completion for stats (both users and guests) for scheduled games
+      if (scheduleDate && !userCompletionRecordedRef.current) {
+        userCompletionRecordedRef.current = true;
+        recordGameCompletion(user, {
+          gameMode: 'guess_player_scheduled',
+          gameDate: scheduleDate,
+          won: isWin,
+          score: newGuesses.length,
+        }).then(() => {
+          // Refresh streaks for logged-in users on wins
+          if (user && isWin) {
+            refreshStreaks();
+          }
+        });
+      }
     }
 
     // Auto-focus the input after submitting a guess (if not game over and on larger screens)
@@ -283,6 +303,17 @@ function GuessThePlayerGame({ playerId, scheduleDate, previousCompletion, onComp
       targetId: playerId,
       targetDate: scheduleDate ?? undefined,
     });
+
+    // Record completion for stats (both users and guests) for scheduled games
+    if (scheduleDate && !userCompletionRecordedRef.current) {
+      userCompletionRecordedRef.current = true;
+      recordGameCompletion(user, {
+        gameMode: 'guess_player_scheduled',
+        gameDate: scheduleDate,
+        won: false,
+        score: gameState.guesses.length,
+      });
+    }
   };
 
   if (!gameState.targetPlayer) {

@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless';
-import { Cronograma, CronogramaDB, CronogramaCreate, PlayerSchedule, PlayerScheduleDB, PlayerScheduleCreate, GameMode, DailyGameStats, LeaderboardEntry, RecordGamePlayParams, RecordGamePlayResult, PlayerPositions } from './types';
+import { Cronograma, CronogramaDB, CronogramaCreate, PlayerSchedule, PlayerScheduleDB, PlayerScheduleCreate, GameMode, LeaderboardEntry, RecordGamePlayParams, RecordGamePlayResult, PlayerPositions, UserDB, User, GameCompletion, GameCompletionCreate } from './types';
 import { getTomorrowStringUruguay, getTodayStringUruguay } from './date';
 
 const getSql = () => {
@@ -549,136 +549,146 @@ export async function getNextAvailableDateForPlayerSchedule(): Promise<string> {
 // ==================== GAME ANALYTICS ====================
 
 /**
- * Record a game play - updates daily stats and potentially adds to leaderboard
+ * Record a game play - adds to leaderboard if applicable
  * Returns whether this is a highscore and the entry ID for name submission
  *
- * Highscore logic:
- * - wordle: best (lowest) score for that specific targetDate
- * - guess_player_scheduled: best (lowest) score for that specific targetDate
+ * Highscore rules:
+ * - wordle: ONE per scheduled game (target_date), lowest score wins. Must beat existing.
+ * - guess_player_scheduled: ONE per scheduled player (target_date), lowest score wins. Must beat existing.
  * - guess_player_random: best (lowest) score overall for random mode
- * - versus: top 10 overall (highest streaks)
+ * - versus: Top 10 highest streaks. Must EXCEED (not tie) existing top 10 to qualify.
+ *
+ * Note: Game completions are tracked separately via recordGameCompletion()
  */
 export async function recordGamePlay(params: RecordGamePlayParams): Promise<RecordGamePlayResult> {
   const defaultResult: RecordGamePlayResult = { isHighscore: false, entryId: null, rank: null };
 
   try {
     const sql = getSql();
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format for DB
-
-    // Update daily stats (upsert)
-    await sql`
-      INSERT INTO daily_game_stats (date, game_mode, plays, wins, surrenders, total_score)
-      VALUES (
-        ${today},
-        ${params.gameMode},
-        1,
-        ${params.won ? 1 : 0},
-        ${params.surrendered ? 1 : 0},
-        ${params.score}
-      )
-      ON CONFLICT (date, game_mode)
-      DO UPDATE SET
-        plays = daily_game_stats.plays + 1,
-        wins = daily_game_stats.wins + ${params.won ? 1 : 0},
-        surrenders = daily_game_stats.surrenders + ${params.surrendered ? 1 : 0},
-        total_score = daily_game_stats.total_score + ${params.score},
-        updated_at = CURRENT_TIMESTAMP
-    `;
 
     // Only add to leaderboard if it's a win (for guess games) or any play (for versus)
     if (!params.won && params.gameMode !== 'versus') {
       return defaultResult;
     }
 
-    // Insert the entry and get its ID
-    const insertResult = await sql`
-      INSERT INTO leaderboard (game_mode, score, session_id, target_id, target_date)
-      VALUES (
-        ${params.gameMode},
-        ${params.score},
-        ${params.sessionId || null},
-        ${params.targetId || null},
-        ${params.targetDate || null}
-      )
-      RETURNING id
-    ` as any[];
-
-    const entryId = insertResult[0]?.id;
-
-    // Determine if this is a highscore based on game mode
-    let isHighscore = false;
-    let rank: number | null = null;
-
+    // Check if this qualifies as a highscore based on game mode
     if (params.gameMode === 'versus') {
-      // Versus: top 10 overall (higher is better)
+      // Versus: Must strictly exceed one of the top 10 scores
+      const top10Result = await sql`
+        SELECT score FROM leaderboard
+        WHERE game_mode = 'versus'
+        ORDER BY score DESC
+        LIMIT 10
+      ` as any[];
+
+      const top10Scores = top10Result.map((r: any) => parseInt(r.score));
+      const lowestTop10 = top10Scores.length >= 10 ? Math.min(...top10Scores) : 0;
+
+      // Must strictly exceed the lowest top 10 score (or be in top 10 if less than 10 entries)
+      if (top10Scores.length >= 10 && params.score <= lowestTop10) {
+        return defaultResult; // Doesn't beat top 10, not a highscore
+      }
+
+      // Insert the new entry
+      const insertResult = await sql`
+        INSERT INTO leaderboard (game_mode, score, session_id, target_id, target_date)
+        VALUES (${params.gameMode}, ${params.score}, ${params.sessionId || null}, ${params.targetId || null}, ${params.targetDate || null})
+        RETURNING id
+      ` as any[];
+
+      const entryId = insertResult[0]?.id;
+
+      // Calculate rank
       const rankResult = await sql`
         SELECT COUNT(*) + 1 as rank
         FROM leaderboard
-        WHERE game_mode = 'versus'
-        AND score > ${params.score}
+        WHERE game_mode = 'versus' AND score > ${params.score}
       ` as any[];
-      rank = parseInt(rankResult[0]?.rank) || null;
-      isHighscore = rank !== null && rank <= 10;
+      const rank = parseInt(rankResult[0]?.rank) || 1;
+
+      // Prune to keep only top 10 for versus
+      await sql`
+        DELETE FROM leaderboard
+        WHERE game_mode = 'versus'
+        AND id NOT IN (
+          SELECT id FROM leaderboard
+          WHERE game_mode = 'versus'
+          ORDER BY score DESC, created_at ASC
+          LIMIT 10
+        )
+      `;
+
+      return { isHighscore: true, entryId, rank };
+
+    } else if (params.gameMode === 'wordle' || params.gameMode === 'guess_player_scheduled') {
+      // Daily games: Only ONE entry per target_date, must beat existing score
+      const existingResult = await sql`
+        SELECT id, score FROM leaderboard
+        WHERE game_mode = ${params.gameMode} AND target_date = ${params.targetDate}
+        ORDER BY score ASC
+        LIMIT 1
+      ` as any[];
+
+      if (existingResult.length > 0) {
+        const existingScore = parseInt(existingResult[0].score);
+        // Must strictly beat the existing score
+        if (params.score >= existingScore) {
+          return defaultResult; // Doesn't beat existing, not a highscore
+        }
+        // Beat the existing score - delete the old entry
+        await sql`
+          DELETE FROM leaderboard WHERE id = ${existingResult[0].id}
+        `;
+      }
+
+      // Insert the new entry
+      const insertResult = await sql`
+        INSERT INTO leaderboard (game_mode, score, session_id, target_id, target_date)
+        VALUES (${params.gameMode}, ${params.score}, ${params.sessionId || null}, ${params.targetId || null}, ${params.targetDate || null})
+        RETURNING id
+      ` as any[];
+
+      const entryId = insertResult[0]?.id;
+      return { isHighscore: true, entryId, rank: 1 };
+
     } else if (params.gameMode === 'guess_player_random') {
       // Random mode: best overall (lower is better)
-      const rankResult = await sql`
-        SELECT COUNT(*) + 1 as rank
-        FROM leaderboard
+      const existingResult = await sql`
+        SELECT score FROM leaderboard
         WHERE game_mode = 'guess_player_random'
-        AND score < ${params.score}
+        ORDER BY score ASC
+        LIMIT 1
       ` as any[];
-      rank = parseInt(rankResult[0]?.rank) || null;
-      isHighscore = rank === 1; // Only #1 is a highscore for random
-    } else {
-      // Wordle and guess_player_scheduled: best for that specific date (lower is better)
-      const rankResult = await sql`
-        SELECT COUNT(*) + 1 as rank
-        FROM leaderboard
-        WHERE game_mode = ${params.gameMode}
-        AND target_date = ${params.targetDate}
-        AND score < ${params.score}
+
+      if (existingResult.length > 0 && params.score >= parseInt(existingResult[0].score)) {
+        return defaultResult; // Doesn't beat existing best
+      }
+
+      // Insert the new entry
+      const insertResult = await sql`
+        INSERT INTO leaderboard (game_mode, score, session_id, target_id, target_date)
+        VALUES (${params.gameMode}, ${params.score}, ${params.sessionId || null}, ${params.targetId || null}, ${params.targetDate || null})
+        RETURNING id
       ` as any[];
-      rank = parseInt(rankResult[0]?.rank) || null;
-      isHighscore = rank === 1; // Only #1 for that date is a highscore
-    }
 
-    // Prune leaderboard to keep only top 100 per game mode
-    const isLowerBetter = params.gameMode !== 'versus';
+      const entryId = insertResult[0]?.id;
 
-    if (isLowerBetter) {
+      // Prune to keep only top 10 for random mode
       await sql`
         DELETE FROM leaderboard
-        WHERE game_mode = ${params.gameMode}
+        WHERE game_mode = 'guess_player_random'
         AND id NOT IN (
           SELECT id FROM leaderboard
-          WHERE game_mode = ${params.gameMode}
-          ORDER BY score ASC, created_at DESC
-          LIMIT 100
+          WHERE game_mode = 'guess_player_random'
+          ORDER BY score ASC, created_at ASC
+          LIMIT 10
         )
       `;
-    } else {
-      await sql`
-        DELETE FROM leaderboard
-        WHERE game_mode = ${params.gameMode}
-        AND id NOT IN (
-          SELECT id FROM leaderboard
-          WHERE game_mode = ${params.gameMode}
-          ORDER BY score DESC, created_at DESC
-          LIMIT 100
-        )
-      `;
+
+      return { isHighscore: true, entryId, rank: 1 };
     }
 
-    // Check if our entry was pruned
-    const stillExists = await sql`
-      SELECT id FROM leaderboard WHERE id = ${entryId}
-    ` as any[];
-
-    if (stillExists.length === 0) {
-      return defaultResult; // Entry was pruned, not a highscore
-    }
-
-    return { isHighscore, entryId, rank };
+    return defaultResult;
   } catch (error) {
     console.error('Error recording game play:', error);
     return defaultResult;
@@ -780,74 +790,8 @@ export async function updateLeaderboardPlayerName(id: number, playerName: string
 }
 
 /**
- * Get daily stats for a game mode (optional date range)
- */
-export async function getDailyStats(
-  gameMode?: GameMode,
-  startDate?: string,
-  endDate?: string
-): Promise<DailyGameStats[]> {
-  try {
-    const sql = getSql();
-
-    let results;
-    if (gameMode && startDate && endDate) {
-      results = await sql`
-        SELECT
-          id,
-          date,
-          game_mode as "gameMode",
-          plays,
-          wins,
-          surrenders,
-          total_score as "totalScore"
-        FROM daily_game_stats
-        WHERE game_mode = ${gameMode}
-        AND date >= ${startDate}
-        AND date <= ${endDate}
-        ORDER BY date DESC
-      ` as any[];
-    } else if (gameMode) {
-      results = await sql`
-        SELECT
-          id,
-          date,
-          game_mode as "gameMode",
-          plays,
-          wins,
-          surrenders,
-          total_score as "totalScore"
-        FROM daily_game_stats
-        WHERE game_mode = ${gameMode}
-        ORDER BY date DESC
-        LIMIT 30
-      ` as any[];
-    } else {
-      results = await sql`
-        SELECT
-          id,
-          date,
-          game_mode as "gameMode",
-          plays,
-          wins,
-          surrenders,
-          total_score as "totalScore"
-        FROM daily_game_stats
-        ORDER BY date DESC
-        LIMIT 100
-      ` as any[];
-    }
-
-    return results as DailyGameStats[];
-  } catch (error) {
-    console.error('Error fetching daily stats:', error);
-    return [];
-  }
-}
-
-/**
  * Get aggregate stats summary for all game modes
- * Note: Aggregation done in JS due to Neon serverless caching issues with SQL GROUP BY
+ * Uses game_completions table (includes both users and guests)
  */
 export async function getStatsSummary(): Promise<{
   gameMode: GameMode;
@@ -857,40 +801,26 @@ export async function getStatsSummary(): Promise<{
 }[]> {
   try {
     const sql = getSql();
-    // Fetch raw data and aggregate in JavaScript to avoid Neon caching issues
+    // Aggregate stats from game_completions (includes both users and guests)
     const results = await sql`
       SELECT
         game_mode,
-        plays,
-        wins,
-        total_score
-      FROM daily_game_stats
+        COUNT(*) as total_plays,
+        COUNT(*) FILTER (WHERE won = true) as total_wins,
+        COALESCE(SUM(score), 0) as total_score
+      FROM game_completions
+      GROUP BY game_mode
+      ORDER BY game_mode
     ` as any[];
 
-    // Aggregate by game_mode in JavaScript
-    const aggregated: Record<string, { totalPlays: number; totalWins: number; totalScore: number }> = {};
-
-    for (const row of results) {
-      const mode = row.game_mode;
-      if (!aggregated[mode]) {
-        aggregated[mode] = { totalPlays: 0, totalWins: 0, totalScore: 0 };
-      }
-      aggregated[mode].totalPlays += row.plays || 0;
-      aggregated[mode].totalWins += row.wins || 0;
-      aggregated[mode].totalScore += row.total_score || 0;
-    }
-
-    // Convert to array format
-    return Object.entries(aggregated)
-      .map(([gameMode, stats]) => ({
-        gameMode: gameMode as GameMode,
-        totalPlays: stats.totalPlays,
-        totalWins: stats.totalWins,
-        avgScore: stats.totalPlays > 0
-          ? Math.round((stats.totalScore / stats.totalPlays) * 100) / 100
-          : 0,
-      }))
-      .sort((a, b) => a.gameMode.localeCompare(b.gameMode));
+    return results.map((row: any) => ({
+      gameMode: row.game_mode as GameMode,
+      totalPlays: parseInt(row.total_plays) || 0,
+      totalWins: parseInt(row.total_wins) || 0,
+      avgScore: row.total_plays > 0
+        ? Math.round((row.total_score / row.total_plays) * 100) / 100
+        : 0,
+    }));
   } catch (error) {
     console.error('Error fetching stats summary:', error);
     return [];
@@ -898,19 +828,292 @@ export async function getStatsSummary(): Promise<{
 }
 
 /**
- * Debug function: Get raw daily stats without aggregation
+ * Debug function: Get recent game completions
  */
-export async function getRawDailyStats(): Promise<any[]> {
+export async function getRecentCompletions(): Promise<any[]> {
   try {
     const sql = getSql();
     const results = await sql`
-      SELECT *
-      FROM daily_game_stats
-      ORDER BY date DESC, game_mode
+      SELECT
+        id,
+        user_id,
+        session_id,
+        game_mode,
+        game_date,
+        won,
+        score,
+        completed_at
+      FROM game_completions
+      ORDER BY completed_at DESC
+      LIMIT 100
     ` as any[];
     return results;
   } catch (error) {
-    console.error('Error fetching raw daily stats:', error);
+    console.error('Error fetching recent completions:', error);
     return [];
+  }
+}
+
+// ============================================
+// USER AUTHENTICATION FUNCTIONS
+// ============================================
+
+/**
+ * Get user by username (case-insensitive)
+ */
+export async function getUserByUsername(username: string): Promise<UserDB | null> {
+  try {
+    const sql = getSql();
+    const results = await sql`
+      SELECT id, username, username_lower, password_hash, created_at
+      FROM users
+      WHERE username_lower = ${username.toLowerCase()}
+      LIMIT 1
+    ` as any[];
+
+    return results.length > 0 ? results[0] : null;
+  } catch (error) {
+    console.error('Error fetching user by username:', error);
+    return null;
+  }
+}
+
+/**
+ * Get user by ID
+ */
+export async function getUserById(userId: number): Promise<User | null> {
+  try {
+    const sql = getSql();
+    const results = await sql`
+      SELECT id, username, created_at as "createdAt"
+      FROM users
+      WHERE id = ${userId}
+      LIMIT 1
+    ` as any[];
+
+    return results.length > 0 ? results[0] : null;
+  } catch (error) {
+    console.error('Error fetching user by ID:', error);
+    return null;
+  }
+}
+
+/**
+ * Create a new user
+ */
+export async function createUser(username: string, passwordHash: string): Promise<User | null> {
+  try {
+    const sql = getSql();
+    const results = await sql`
+      INSERT INTO users (username, username_lower, password_hash)
+      VALUES (${username}, ${username.toLowerCase()}, ${passwordHash})
+      RETURNING id, username, created_at as "createdAt"
+    ` as any[];
+
+    return results.length > 0 ? results[0] : null;
+  } catch (error: any) {
+    // Check for unique constraint violation
+    if (error.message?.includes('unique constraint') || error.message?.includes('duplicate key')) {
+      console.error('Username already exists');
+      return null;
+    }
+    console.error('Error creating user:', error);
+    return null;
+  }
+}
+
+/**
+ * Check if username is available
+ */
+export async function isUsernameAvailable(username: string): Promise<boolean> {
+  const user = await getUserByUsername(username);
+  return user === null;
+}
+
+// ============================================
+// GAME COMPLETIONS FUNCTIONS
+// ============================================
+
+/**
+ * Record a game completion for a user or guest
+ *
+ * For daily games (wordle, guess_player_scheduled):
+ *   - Uses ON CONFLICT to ensure one completion per user/session per day
+ *
+ * For versus:
+ *   - Simple INSERT, allows unlimited games (each has unique timestamp)
+ */
+export async function recordGameCompletion(data: GameCompletionCreate): Promise<GameCompletion | null> {
+  try {
+    const sql = getSql();
+    const isDailyGame = data.gameMode === 'wordle' || data.gameMode === 'guess_player_scheduled';
+
+    if (isDailyGame) {
+      // Daily games: upsert with conflict handling
+      if (data.userId) {
+        const results = await sql`
+          INSERT INTO game_completions (user_id, game_mode, game_date, won, score)
+          VALUES (${data.userId}, ${data.gameMode}, ${data.gameDate}, ${data.won}, ${data.score})
+          ON CONFLICT (user_id, game_mode, game_date)
+            WHERE game_mode IN ('wordle', 'guess_player_scheduled') AND user_id IS NOT NULL
+          DO UPDATE SET won = EXCLUDED.won, score = EXCLUDED.score
+          RETURNING
+            id,
+            user_id as "userId",
+            game_mode as "gameMode",
+            game_date as "gameDate",
+            won,
+            score,
+            completed_at as "completedAt"
+        ` as any[];
+        return results.length > 0 ? results[0] : null;
+      } else {
+        const results = await sql`
+          INSERT INTO game_completions (user_id, session_id, game_mode, game_date, won, score)
+          VALUES (NULL, ${data.sessionId || null}, ${data.gameMode}, ${data.gameDate}, ${data.won}, ${data.score})
+          ON CONFLICT (session_id, game_mode, game_date)
+            WHERE game_mode IN ('wordle', 'guess_player_scheduled') AND user_id IS NULL AND session_id IS NOT NULL
+          DO UPDATE SET won = EXCLUDED.won, score = EXCLUDED.score
+          RETURNING
+            id,
+            user_id as "userId",
+            game_mode as "gameMode",
+            game_date as "gameDate",
+            won,
+            score,
+            completed_at as "completedAt"
+        ` as any[];
+        return results.length > 0 ? results[0] : null;
+      }
+    } else {
+      // Versus: simple insert, no conflict handling (unlimited games)
+      const results = await sql`
+        INSERT INTO game_completions (user_id, session_id, game_mode, game_date, won, score)
+        VALUES (
+          ${data.userId || null},
+          ${data.sessionId || null},
+          ${data.gameMode},
+          ${data.gameDate},
+          ${data.won},
+          ${data.score}
+        )
+        RETURNING
+          id,
+          user_id as "userId",
+          game_mode as "gameMode",
+          game_date as "gameDate",
+          won,
+          score,
+          completed_at as "completedAt"
+      ` as any[];
+      return results.length > 0 ? results[0] : null;
+    }
+  } catch (error) {
+    console.error('Error recording game completion:', error);
+    return null;
+  }
+}
+
+/**
+ * Get all completions for a user
+ */
+export async function getCompletionsForUser(userId: number, gameMode?: 'wordle' | 'guess_player_scheduled' | 'versus'): Promise<GameCompletion[]> {
+  try {
+    const sql = getSql();
+    let results;
+
+    if (gameMode) {
+      results = await sql`
+        SELECT
+          id,
+          user_id as "userId",
+          game_mode as "gameMode",
+          game_date as "gameDate",
+          won,
+          score,
+          completed_at as "completedAt"
+        FROM game_completions
+        WHERE user_id = ${userId} AND game_mode = ${gameMode}
+        ORDER BY completed_at DESC
+      ` as any[];
+    } else {
+      results = await sql`
+        SELECT
+          id,
+          user_id as "userId",
+          game_mode as "gameMode",
+          game_date as "gameDate",
+          won,
+          score,
+          completed_at as "completedAt"
+        FROM game_completions
+        WHERE user_id = ${userId}
+        ORDER BY completed_at DESC
+      ` as any[];
+    }
+
+    return results;
+  } catch (error) {
+    console.error('Error fetching user completions:', error);
+    return [];
+  }
+}
+
+/**
+ * Check if user has completed a specific daily game
+ */
+export async function hasUserCompletedGame(userId: number, gameMode: string, gameDate: string): Promise<boolean> {
+  try {
+    const sql = getSql();
+    const results = await sql`
+      SELECT id FROM game_completions
+      WHERE user_id = ${userId} AND game_mode = ${gameMode} AND game_date = ${gameDate}
+      LIMIT 1
+    ` as any[];
+
+    return results.length > 0;
+  } catch (error) {
+    console.error('Error checking user game completion:', error);
+    return false;
+  }
+}
+
+/**
+ * Link a leaderboard entry to a user
+ */
+export async function linkLeaderboardEntryToUser(entryId: number, userId: number): Promise<boolean> {
+  try {
+    const sql = getSql();
+    const results = await sql`
+      UPDATE leaderboard
+      SET user_id = ${userId}
+      WHERE id = ${entryId}
+      RETURNING id
+    ` as any[];
+
+    return results.length > 0;
+  } catch (error) {
+    console.error('Error linking leaderboard entry to user:', error);
+    return false;
+  }
+}
+
+/**
+ * Update leaderboard entry with user info (sets both user_id and player_name)
+ */
+export async function updateLeaderboardWithUser(entryId: number, userId: number, username: string): Promise<boolean> {
+  try {
+    const sql = getSql();
+    const results = await sql`
+      UPDATE leaderboard
+      SET user_id = ${userId}, player_name = ${username}
+      WHERE id = ${entryId}
+      RETURNING id
+    ` as any[];
+
+    return results.length > 0;
+  } catch (error) {
+    console.error('Error updating leaderboard with user:', error);
+    return false;
   }
 }

@@ -16,6 +16,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { normalizeString } from '@/lib/utils';
 import { getTodayStringUruguay, getUruguayDate, parseDDMMYYYYToDate } from '@/lib/date';
+import { useAuth } from '@/contexts/AuthContext';
+import { recordGameCompletion } from '@/lib/guest-session';
 export const AppContext = createContext(defaultAppContext);
 
 interface RecordStatsResult {
@@ -60,6 +62,7 @@ const partidos_data = data as Partido[];
 const cronograma_fallback = cronograma as Cronograma[];
 
 function App() {
+  const { user, refreshStreaks } = useAuth();
   const [fieldMode, setFieldMode] = useState(true);
   const [partido, setPartido] = useState<Partido>(defaultAppContext.partido);
   const [player_name, setPlayerName] = useState<string[]>([]);
@@ -74,6 +77,8 @@ function App() {
 
   // Track if we've recorded stats for the current game to prevent duplicates
   const statsRecordedRef = useRef<string | null>(null);
+  // Track if we've recorded user completion for the current game
+  const userCompletionRecordedRef = useRef<string | null>(null);
 
   // Highscore modal state
   const [highscoreData, setHighscoreData] = useState<{
@@ -241,7 +246,23 @@ function App() {
         });
       }
     });
-  }, [gameOver, currentGame, solved]);
+
+    // Record completion for stats (both users and guests)
+    if (userCompletionRecordedRef.current !== currentGame.liveDate) {
+      userCompletionRecordedRef.current = currentGame.liveDate;
+      recordGameCompletion(user, {
+        gameMode: 'wordle',
+        gameDate: currentGame.liveDate,
+        won,
+        score: totalGuesses,
+      }).then(() => {
+        // Refresh streaks for logged-in users
+        if (user && won) {
+          refreshStreaks();
+        }
+      });
+    }
+  }, [gameOver, currentGame, solved, user, refreshStreaks]);
 
   const toggleFieldMode = () => {
     setFieldMode(!fieldMode);

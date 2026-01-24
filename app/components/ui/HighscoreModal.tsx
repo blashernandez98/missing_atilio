@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from './modal';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface HighscoreModalProps {
   isOpen: boolean;
@@ -27,10 +28,31 @@ const SCORE_LABELS: Record<string, string> = {
 };
 
 function HighscoreModal({ isOpen, onClose, entryId, score, rank, gameMode }: HighscoreModalProps) {
+  const { user } = useAuth();
   const [playerName, setPlayerName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-submit with username if user is logged in
+  useEffect(() => {
+    if (isOpen && user && entryId && !submitted) {
+      // Auto-save with username
+      setIsSubmitting(true);
+      fetch('/api/stats/leaderboard/name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId, playerName: user.username }),
+      })
+        .then((res) => {
+          if (res.ok) {
+            setPlayerName(user.username);
+            setSubmitted(true);
+          }
+        })
+        .finally(() => setIsSubmitting(false));
+    }
+  }, [isOpen, user, entryId, submitted]);
 
   const handleSubmit = async () => {
     if (!playerName.trim()) {
@@ -101,49 +123,57 @@ function HighscoreModal({ isOpen, onClose, entryId, score, rank, gameMode }: Hig
         </div>
 
         {!submitted ? (
-          <>
-            {/* Name Input */}
-            <div className="w-full mb-4">
-              <label className="block text-sm text-white/80 mb-2 text-center">
-                Escribí tu nombre para el ranking:
-              </label>
-              <input
-                type="text"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value.slice(0, 15))}
-                placeholder="Tu nombre..."
-                maxLength={15}
-                className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/30 text-white placeholder-white/50 text-center text-lg focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-500/50"
-                disabled={isSubmitting}
-                autoFocus
-              />
-              <p className="text-xs text-white/60 text-center mt-1">
-                {playerName.length}/15 caracteres
-              </p>
+          user ? (
+            /* Logged in user - auto-saving */
+            <div className="text-center mb-6">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-3"></div>
+              <p className="text-sm text-white/80">Guardando como <strong>{user.username}</strong>...</p>
             </div>
+          ) : (
+            <>
+              {/* Guest - Name Input */}
+              <div className="w-full mb-4">
+                <label className="block text-sm text-white/80 mb-2 text-center">
+                  Escribí tu nombre para el ranking:
+                </label>
+                <input
+                  type="text"
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value.slice(0, 15))}
+                  placeholder="Tu nombre..."
+                  maxLength={15}
+                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/30 text-white placeholder-white/50 text-center text-lg focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-500/50"
+                  disabled={isSubmitting}
+                  autoFocus
+                />
+                <p className="text-xs text-white/60 text-center mt-1">
+                  {playerName.length}/15 caracteres
+                </p>
+              </div>
 
-            {error && (
-              <p className="text-red-300 text-sm mb-4">{error}</p>
-            )}
+              {error && (
+                <p className="text-red-300 text-sm mb-4">{error}</p>
+              )}
 
-            {/* Buttons */}
-            <div className="flex gap-3 w-full">
-              <button
-                onClick={handleClose}
-                className="flex-1 px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/30 text-white font-semibold transition-all"
-                disabled={isSubmitting}
-              >
-                Omitir
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={isSubmitting || !playerName.trim()}
-                className="flex-1 px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? 'Guardando...' : 'Guardar'}
-              </button>
-            </div>
-          </>
+              {/* Buttons */}
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={handleClose}
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/30 text-white font-semibold transition-all"
+                  disabled={isSubmitting}
+                >
+                  Omitir
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting || !playerName.trim()}
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </>
+          )
         ) : (
           <>
             {/* Success Message */}

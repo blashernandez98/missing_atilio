@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getStatsSummary, getRawDailyStats } from '@/lib/db';
+import { getStatsSummary, getRecentCompletions } from '@/lib/db';
+import { unstable_noStore as noStore } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(request: Request) {
+  noStore(); // Disable all caching for this route
+
   const url = new URL(request.url);
   const debug = url.searchParams.get('debug') === 'true';
 
@@ -11,11 +15,11 @@ export async function GET(request: Request) {
     const summary = await getStatsSummary();
 
     if (debug) {
-      const rawStats = await getRawDailyStats();
+      const recentCompletions = await getRecentCompletions();
       return NextResponse.json({
         timestamp: new Date().toISOString(),
         summary,
-        rawStats,
+        recentCompletions,
       }, {
         status: 200,
         headers: {

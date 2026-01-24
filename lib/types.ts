@@ -166,16 +166,6 @@ export interface GuessThePlayerGameState {
 // Analytics types
 export type GameMode = 'guess_player_scheduled' | 'guess_player_random' | 'versus' | 'wordle';
 
-export interface DailyGameStats {
-  id: number;
-  date: string;
-  gameMode: GameMode;
-  plays: number;
-  wins: number;
-  surrenders: number;
-  totalScore: number;
-}
-
 export interface LeaderboardEntry {
   id: number;
   gameMode: GameMode;
@@ -201,4 +191,62 @@ export interface RecordGamePlayResult {
   isHighscore: boolean;
   entryId: number | null;
   rank: number | null; // Position in leaderboard (1 = best)
+}
+
+// User Authentication Types
+export interface User {
+  id: number;
+  username: string;
+  createdAt: Date;
+}
+
+export interface UserDB {
+  id: number;
+  username: string;
+  username_lower: string;
+  password_hash: string;
+  created_at: Date;
+}
+
+export interface UserCreate {
+  username: string;
+  password: string;
+}
+
+// Game Completion Types
+export interface GameCompletion {
+  id: number;
+  userId: number | null;  // NULL for guests
+  gameMode: 'wordle' | 'guess_player_scheduled' | 'versus';
+  gameDate: string;
+  won: boolean;
+  score: number;
+  completedAt: Date;
+}
+
+export interface GameCompletionCreate {
+  userId: number | null;  // NULL for guest games
+  sessionId?: string | null;  // For guest tracking
+  gameMode: 'wordle' | 'guess_player_scheduled' | 'versus';
+  gameDate: string;
+  won: boolean;
+  score: number;
+}
+
+// Migration Types (for importing localStorage data)
+export interface MigrationWordleData {
+  date: string;
+  solved: Record<number, number>;
+  score: number;
+}
+
+export interface MigrationGuessPlayerData {
+  date: string;
+  guessCount: number;
+  won: boolean;
+}
+
+export interface MigrationPayload {
+  wordle: MigrationWordleData[];
+  guessPlayer: MigrationGuessPlayerData[];
 }

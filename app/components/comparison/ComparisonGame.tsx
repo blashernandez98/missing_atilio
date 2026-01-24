@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Player, ComparisonStat, ComparisonGameState } from '@/lib/types';
 import PlayerCompareCard from './PlayerCompareCard';
 import ComparisonGameOver from './ComparisonGameOver';
 import HighscoreModal from '../ui/HighscoreModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { recordGameCompletion } from '@/lib/guest-session';
 import playersData from '@/app/data/players.json';
 
 const players = playersData as Player[];
@@ -51,6 +53,7 @@ const STAT_LABELS: Record<ComparisonStat, string> = {
 };
 
 function ComparisonGame() {
+  const { user } = useAuth();
   const [gameState, setGameState] = useState<ComparisonGameState>({
     currentStreak: 0,
     bestStreak: 0,
@@ -65,6 +68,9 @@ function ComparisonGame() {
   const [manualPlayerId, setManualPlayerId] = useState<string>('');
   const [showDevTools, setShowDevTools] = useState(false);
   const [lastStreakBeforeLoss, setLastStreakBeforeLoss] = useState<number>(0);
+
+  // Track if current game completion was recorded to prevent duplicates
+  const completionRecordedRef = useRef(false);
 
   // Highscore modal state
   const [highscoreData, setHighscoreData] = useState<{
@@ -186,6 +192,9 @@ function ComparisonGame() {
   const startNewGame = () => {
     const { playerA, playerB, stat } = getValidPlayerPair();
 
+    // Reset completion tracking for new game
+    completionRecordedRef.current = false;
+
     setGameState({
       currentStreak: 0,
       bestStreak: gameState.bestStreak,
@@ -296,6 +305,19 @@ function ComparisonGame() {
           });
         }
       });
+
+      // Record completion for stats (both users and guests)
+      if (!completionRecordedRef.current) {
+        completionRecordedRef.current = true;
+        // Use timestamp as date to allow multiple games per day
+        const timestamp = new Date().toISOString();
+        recordGameCompletion(user, {
+          gameMode: 'versus',
+          gameDate: timestamp,
+          won: false, // Versus always ends on loss
+          score: streakToRecord,
+        });
+      }
     }
 
     setGameState({
