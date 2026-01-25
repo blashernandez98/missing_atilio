@@ -10,6 +10,8 @@ import Image from 'next/image';
 import { parseDDMMYYYYToDate, getUruguayDate } from '@/lib/date';
 import type { PlayerSchedule } from '@/lib/types';
 import playersData from '@/app/data/players.json';
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthControls } from '@/app/components/auth/AppHeader';
 
 interface NavigationState {
   schedules: PlayerSchedule[]; // All scheduled players (sorted by date ascending)
@@ -37,6 +39,7 @@ function parseCompletionData(value: string): CompletionData | null {
 }
 
 export default function AdivinaJugadorPage() {
+  const { streaks } = useAuth();
   const [showInstructions, setShowInstructions] = useState(false);
   const [loading, setLoading] = useState(true);
   const [navState, setNavState] = useState<NavigationState>({
@@ -252,8 +255,8 @@ export default function AdivinaJugadorPage() {
           <span className="hidden sm:inline">Volver</span>
         </Link>
 
-        <div className='flex items-center gap-3'>
-          <h1 className='text-2xl sm:text-3xl font-bold text-slate-50 tracking-tight'>
+        <div className='flex items-center gap-2 sm:gap-3'>
+          <h1 className='text-lg sm:text-2xl md:text-3xl font-bold text-slate-50 tracking-tight'>
             Adivina el Jugador
           </h1>
           <Image
@@ -261,12 +264,11 @@ export default function AdivinaJugadorPage() {
             alt='Atilio Garcia'
             width='50'
             height='50'
-            className='rounded-lg shadow-lg'
+            className='rounded-lg shadow-lg w-8 h-8 sm:w-[50px] sm:h-[50px]'
           />
         </div>
 
-        {/* Empty div for flex spacing - help button moved to nav bar */}
-        <div className="w-10 sm:w-12" />
+        <AuthControls />
       </nav>
 
       {/* Navigation Bar */}
@@ -279,6 +281,7 @@ export default function AdivinaJugadorPage() {
           onPrev={handlePrev}
           onNext={handleNext}
           onShowInstructions={() => setShowInstructions(true)}
+          currentStreak={streaks.guess_player_scheduled?.current ?? 0}
         />
       </div>
 

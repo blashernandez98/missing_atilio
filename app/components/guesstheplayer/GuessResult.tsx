@@ -90,8 +90,9 @@ function GuessResult({ guess, index, isAnswer = false }: GuessResultProps) {
         </div>
       </div>
 
-      {/* Top row: Text fields (5 columns) */}
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-1 mb-1">
+      {/* Mobile: 3x3 grid, Desktop: 2 rows (text on top, numerical on bottom) */}
+      {/* Mobile layout */}
+      <div className="grid grid-cols-3 gap-1 sm:hidden">
         <StatCell
           label="País"
           value={player.country}
@@ -117,10 +118,6 @@ function GuessResult({ guess, index, isAnswer = false }: GuessResultProps) {
           value={player.originClub}
           comparison={comparisons.originClub}
         />
-      </div>
-
-      {/* Bottom row: Numerical fields (4 columns, stretched to match top row width) */}
-      <div className="grid grid-cols-4 gap-1">
         <StatCell
           label="Debut"
           value={player.debutYear}
@@ -141,6 +138,62 @@ function GuessResult({ guess, index, isAnswer = false }: GuessResultProps) {
           value={player.stats.officialTitles}
           comparison={comparisons.officialTitles}
         />
+      </div>
+
+      {/* Desktop layout: 2 rows */}
+      <div className="hidden sm:block space-y-1">
+        {/* Top row: Text fields (5 columns) */}
+        <div className="grid grid-cols-5 gap-1">
+          <StatCell
+            label="País"
+            value={player.country}
+            comparison={comparisons.country}
+          />
+          <StatCell
+            label="Ciudad"
+            value={player.birthCity}
+            comparison={comparisons.birthCity}
+          />
+          <StatCell
+            label="Posición"
+            value={getPositionLabel(player.positionCategory)}
+            comparison={comparisons.positionCategory}
+          />
+          <StatCell
+            label="F. Nac."
+            value={player.birthDate}
+            comparison={comparisons.birthDate}
+          />
+          <StatCell
+            label="Proviene"
+            value={player.originClub}
+            comparison={comparisons.originClub}
+          />
+        </div>
+
+        {/* Bottom row: Numerical fields (4 columns) */}
+        <div className="grid grid-cols-4 gap-1">
+          <StatCell
+            label="Debut"
+            value={player.debutYear}
+            comparison={comparisons.debutYear}
+          />
+          <StatCell
+            label="Partidos"
+            value={player.stats.totalMatches}
+            comparison={comparisons.totalMatches}
+          />
+          <StatCell
+            label="Goles"
+            value={player.stats.totalGoals}
+            comparison={comparisons.totalGoals}
+          />
+          <StatCell
+            label="Títulos"
+            value={player.stats.officialTitles}
+            comparison={comparisons.officialTitles}
+          />
+        </div>
       </div>
     </div>
   );

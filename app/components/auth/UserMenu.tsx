@@ -64,7 +64,7 @@ function UserMenu() {
 
         {/* Dropdown Menu */}
         {isOpen && (
-          <div className="absolute right-0 mt-2 w-64 rounded-lg bg-slate-800 border border-slate-600 shadow-xl z-50 overflow-hidden">
+          <div className="absolute right-0 mt-2 w-64 rounded-lg bg-slate-900 border border-slate-600 shadow-xl z-50 overflow-hidden">
             {/* User Info */}
             <div className="px-4 py-3 bg-slate-700/50 border-b border-slate-600">
               <p className="text-white font-semibold">{user.username}</p>

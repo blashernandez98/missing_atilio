@@ -10,6 +10,7 @@ interface PlayerScheduleNavProps {
   onPrev: () => void;
   onNext: () => void;
   onShowInstructions: () => void;
+  currentStreak?: number; // Current win streak for this game mode
 }
 
 function PlayerScheduleNav({
@@ -20,6 +21,7 @@ function PlayerScheduleNav({
   onPrev,
   onNext,
   onShowInstructions,
+  currentStreak = 0,
 }: PlayerScheduleNavProps) {
   const isRandomMode = currentDate === null;
 
@@ -29,6 +31,13 @@ function PlayerScheduleNav({
       <span className="text-xs text-slate-400 uppercase tracking-wider mb-1">
         Jugador del día
       </span>
+
+      {/* Streak counter */}
+      {!isRandomMode && currentStreak > 0 && (
+        <span className="text-xs text-green-400 font-semibold mb-1">
+          {currentStreak} {currentStreak === 1 ? 'día' : 'días'} de racha ✓
+        </span>
+      )}
 
       {/* Centered Navigation */}
       <div className="flex items-center gap-2 sm:gap-3">

@@ -69,6 +69,17 @@ function AuthModal({ isOpen, onClose }: AuthModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <div className="flex flex-col rounded-xl items-center relative p-6 sm:p-8 bg-gradient-to-br from-[#1e3c72] to-[#2a5298] text-white border-2 border-red-500 shadow-2xl min-w-[300px] sm:min-w-[350px]">
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 text-white/60 hover:text-white transition-colors p-1"
+          aria-label="Cerrar"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
         {/* Title */}
         <h2 className="text-2xl font-bold text-center mb-6">
           {activeTab === 'login' ? 'Iniciar Sesión' : 'Crear Cuenta'}

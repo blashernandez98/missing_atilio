@@ -110,15 +110,15 @@ function GuessGameOver({ player, won, guessCount, maxGuesses, onPlayAgain }: Gue
         </div>
 
         {/* Buttons */}
-        <div className="flex gap-3">
-          <Link href="/" className="flex-1">
-            <button className="w-full px-4 py-2 rounded-xl font-bold bg-slate-700 hover:bg-slate-600 text-white transition-colors">
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/" className="block">
+            <button className="w-full px-4 py-3 rounded-xl font-bold bg-slate-700 hover:bg-slate-600 text-white transition-colors text-sm sm:text-base">
               Inicio
             </button>
           </Link>
           <button
             onClick={onPlayAgain}
-            className="flex-1 px-4 py-2 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+            className="w-full px-4 py-3 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors text-sm sm:text-base"
           >
             Jugar de Nuevo
           </button>

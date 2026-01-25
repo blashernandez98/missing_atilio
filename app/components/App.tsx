@@ -18,6 +18,7 @@ import { normalizeString } from '@/lib/utils';
 import { getTodayStringUruguay, getUruguayDate, parseDDMMYYYYToDate } from '@/lib/date';
 import { useAuth } from '@/contexts/AuthContext';
 import { recordGameCompletion } from '@/lib/guest-session';
+import { AuthControls } from '@/app/components/auth/AppHeader';
 export const AppContext = createContext(defaultAppContext);
 
 interface RecordStatsResult {
@@ -62,7 +63,7 @@ const partidos_data = data as Partido[];
 const cronograma_fallback = cronograma as Cronograma[];
 
 function App() {
-  const { user, refreshStreaks } = useAuth();
+  const { user, refreshStreaks, streaks } = useAuth();
   const [fieldMode, setFieldMode] = useState(true);
   const [partido, setPartido] = useState<Partido>(defaultAppContext.partido);
   const [player_name, setPlayerName] = useState<string[]>([]);
@@ -351,53 +352,66 @@ function App() {
             <span className="hidden sm:inline">Volver</span>
           </Link>
 
-          <div className='flex flex-col items-center gap-2'>
-            <div className='flex items-center gap-3'>
-              <h1 className='text-2xl sm:text-3xl font-bold text-slate-50 tracking-tight'>Missing Atilio</h1>
-              <Image src='/atilio_grande.png' alt='Atilio Garcia' width='50' height='50' className='rounded-lg shadow-lg' />
-            </div>
-
-            {/* Date Navigation */}
-            {currentGame && (
-              <div className='flex items-center gap-2 sm:gap-3'>
-                <button
-                  onClick={() => navigateGame('prev')}
-                  className='text-white/60 hover:text-white transition-colors text-lg sm:text-xl disabled:opacity-30 disabled:cursor-not-allowed'
-                  disabled={cronogramaData.findIndex(g => g.liveDate === currentGame.liveDate) === 0}
-                >
-                  ◀
-                </button>
-                <div className='flex items-center gap-2'>
-                  <span className='text-white/80 text-sm sm:text-base font-semibold'>
-                    {currentGame.liveDate}
-                  </span>
-                  {/* Green check for completed games */}
-                  {Object.keys(solved).length === 11 && (
-                    <span className='text-green-400 text-lg' title='Completado'>✓</span>
-                  )}
-                </div>
-                <button
-                  onClick={() => navigateGame('next')}
-                  className='text-white/60 hover:text-white transition-colors text-lg sm:text-xl disabled:opacity-30 disabled:cursor-not-allowed'
-                  disabled={(() => {
-                    const currentIndex = cronogramaData.findIndex(g => g.liveDate === currentGame.liveDate);
-                    if (currentIndex === -1 || currentIndex === cronogramaData.length - 1) return true;
-
-                    const nextGame = cronogramaData[currentIndex + 1];
-                    const todayDate = getUruguayDate();
-                    const nextGameDate = parseDDMMYYYYToDate(nextGame.liveDate);
-
-                    return nextGameDate > todayDate;
-                  })()}
-                >
-                  ▶
-                </button>
-              </div>
-            )}
+          <div className='flex items-center gap-2 sm:gap-3'>
+            <h1 className='text-lg sm:text-2xl md:text-3xl font-bold text-slate-50 tracking-tight'>Missing Atilio</h1>
+            <Image src='/atilio_grande.png' alt='Atilio Garcia' width='50' height='50' className='rounded-lg shadow-lg w-8 h-8 sm:w-[50px] sm:h-[50px]' />
           </div>
 
-          <div className="w-16 sm:w-24" /> {/* Spacer for centering */}
+          <AuthControls />
         </nav>
+
+        {/* Date Navigation Bar */}
+        {currentGame && (
+          <div className="flex flex-col items-center py-4">
+            {/* Label */}
+            <span className="text-xs text-slate-400 uppercase tracking-wider mb-1">
+              Partido del día
+            </span>
+
+            {/* Streak counter */}
+            {(streaks.wordle?.current ?? 0) > 0 && (
+              <span className="text-xs text-green-400 font-semibold mb-1">
+                {streaks.wordle.current} {streaks.wordle.current === 1 ? 'día' : 'días'} de racha ✓
+              </span>
+            )}
+
+            {/* Navigation */}
+            <div className='flex items-center gap-2 sm:gap-3'>
+              <button
+                onClick={() => navigateGame('prev')}
+                className='text-white/60 hover:text-white transition-colors text-xl sm:text-2xl disabled:opacity-30 disabled:cursor-not-allowed p-1'
+                disabled={cronogramaData.findIndex(g => g.liveDate === currentGame.liveDate) === 0}
+              >
+                ◀
+              </button>
+              <div className='flex items-center gap-2 min-w-[140px] sm:min-w-[160px] justify-center'>
+                <span className='text-white/90 text-sm sm:text-base font-semibold'>
+                  {currentGame.liveDate}
+                </span>
+                {/* Green check for completed games */}
+                {Object.keys(solved).length === 11 && (
+                  <span className='text-green-400 text-sm' title='Completado'>✓</span>
+                )}
+              </div>
+              <button
+                onClick={() => navigateGame('next')}
+                className='text-white/60 hover:text-white transition-colors text-xl sm:text-2xl disabled:opacity-30 disabled:cursor-not-allowed p-1'
+                disabled={(() => {
+                  const currentIndex = cronogramaData.findIndex(g => g.liveDate === currentGame.liveDate);
+                  if (currentIndex === -1 || currentIndex === cronogramaData.length - 1) return true;
+
+                  const nextGame = cronogramaData[currentIndex + 1];
+                  const todayDate = getUruguayDate();
+                  const nextGameDate = parseDDMMYYYYToDate(nextGame.liveDate);
+
+                  return nextGameDate > todayDate;
+                })()}
+              >
+                ▶
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className='flex-grow flex flex-col'>
           { fieldMode ? <Field formation={ currentGame ? currentGame.formation : '4-4-2' } /> : <Wordle /> }

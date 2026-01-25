@@ -1,7 +1,10 @@
+'use client';
+
 import ComparisonGame from '@/app/components/comparison/ComparisonGame';
 import Footer from '@/app/components/common/Footer';
 import Link from 'next/link';
 import Image from 'next/image';
+import { AuthControls } from '@/app/components/auth/AppHeader';
 
 export default function ComparisonPage() {
   return (
@@ -16,8 +19,8 @@ export default function ComparisonPage() {
           <span className="hidden sm:inline">Volver</span>
         </Link>
 
-        <div className='flex items-center gap-3'>
-          <h1 className='text-2xl sm:text-3xl font-bold text-slate-50 tracking-tight'>
+        <div className='flex items-center gap-2 sm:gap-3'>
+          <h1 className='text-lg sm:text-2xl md:text-3xl font-bold text-slate-50 tracking-tight'>
             ¿Quién tiene más?
           </h1>
           <Image
@@ -25,11 +28,11 @@ export default function ComparisonPage() {
             alt='Atilio Garcia'
             width='50'
             height='50'
-            className='rounded-lg shadow-lg'
+            className='rounded-lg shadow-lg w-8 h-8 sm:w-[50px] sm:h-[50px]'
           />
         </div>
 
-        <div className="w-16 sm:w-24" /> {/* Spacer for centering */}
+        <AuthControls />
       </nav>
 
       {/* Game */}
