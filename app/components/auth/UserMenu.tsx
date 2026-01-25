@@ -45,7 +45,7 @@ function UserMenu() {
 
   return (
     <>
-      <div className="relative" ref={menuRef}>
+      <div className="relative z-50" ref={menuRef}>
         {/* User Button */}
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -78,7 +78,7 @@ function UserMenu() {
                 {/* Missing 11 Streak */}
                 <div className="flex justify-between items-center">
                   <span className="text-slate-300 text-sm">Missing 11</span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col items-end">
                     {wordleStreak ? (
                       <>
                         <span className="text-green-400 text-sm font-bold">
@@ -97,7 +97,7 @@ function UserMenu() {
                 {/* Guess Player Streak */}
                 <div className="flex justify-between items-center">
                   <span className="text-slate-300 text-sm">Adivina el Jugador</span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col items-end">
                     {guessStreak ? (
                       <>
                         <span className="text-green-400 text-sm font-bold">
@@ -129,6 +129,7 @@ function UserMenu() {
               <button
                 onClick={handleSync}
                 disabled={isSyncing}
+                hidden={true}
                 className="w-full px-4 py-2 text-left text-slate-300 hover:bg-slate-700 text-sm transition-colors disabled:opacity-50"
               >
                 {isSyncing ? 'Sincronizando...' : 'Sincronizar datos locales'}

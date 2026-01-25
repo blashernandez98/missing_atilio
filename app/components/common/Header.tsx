@@ -11,7 +11,7 @@ interface HeaderProps {
 export default function Header({ showBackButton = false }: HeaderProps) {
   if (showBackButton) {
     return (
-      <nav className='flex items-center justify-between py-4 sm:py-6 px-4 sm:px-5 bg-slate-950/30 backdrop-blur-sm border-b border-slate-700/50'>
+      <nav className='relative z-40 flex items-center justify-between py-4 sm:py-6 px-4 sm:px-5 bg-slate-950/30 backdrop-blur-sm border-b border-slate-700/50'>
         <Link
           href="/"
           className="text-white/80 hover:text-white transition-colors flex items-center gap-2"
@@ -31,7 +31,7 @@ export default function Header({ showBackButton = false }: HeaderProps) {
   }
 
   return (
-    <nav className='flex items-center justify-between py-4 sm:py-6 px-4 sm:px-5 bg-slate-950/30 backdrop-blur-sm border-b border-slate-700/50'>
+    <nav className='relative z-40 flex items-center justify-between py-4 sm:py-6 px-4 sm:px-5 bg-slate-950/30 backdrop-blur-sm border-b border-slate-700/50'>
       {/* Spacer for centering on desktop only */}
       <div className="hidden sm:block w-24" />
 

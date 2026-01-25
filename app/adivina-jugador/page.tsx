@@ -246,7 +246,7 @@ export default function AdivinaJugadorPage() {
       />
 
       {/* Header */}
-      <nav className='flex items-center justify-between py-4 sm:py-6 px-4 sm:px-5 bg-slate-950/30 backdrop-blur-sm border-b border-slate-700/50'>
+      <nav className='relative z-40 flex items-center justify-between py-4 sm:py-6 px-4 sm:px-5 bg-slate-950/30 backdrop-blur-sm border-b border-slate-700/50'>
         <Link
           href="/"
           className="text-white/80 hover:text-white transition-colors flex items-center gap-2"
