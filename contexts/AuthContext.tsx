@@ -27,19 +27,19 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Helper to get the sync flag key for a user
-function getSyncKey(userId: number): string {
-  return `atilio_synced_${userId}`;
+// Helper to get the migration flag key for a user (tracks if initial localStorage was synced to DB)
+function getMigrationKey(userId: number): string {
+  return `atilio_migrated_${userId}`;
 }
 
-// Check if user's data has been synced
-function isDataSynced(userId: number): boolean {
-  return localStorage.getItem(getSyncKey(userId)) === 'true';
+// Check if user's localStorage data has been migrated to DB
+function isDataMigrated(userId: number): boolean {
+  return localStorage.getItem(getMigrationKey(userId)) === 'true';
 }
 
-// Mark user's data as synced
-function markDataSynced(userId: number): void {
-  localStorage.setItem(getSyncKey(userId), 'true');
+// Mark user's data as migrated
+function markDataMigrated(userId: number): void {
+  localStorage.setItem(getMigrationKey(userId), 'true');
 }
 
 // Calculate streaks from completions locally
@@ -107,6 +107,16 @@ function calculateStreaksFromCompletions(
   return streaks;
 }
 
+// Calculate best versus streak from completions
+function calculateVersusBestStreak(completions: GameCompletion[]): number {
+  const versusWins = completions
+    .filter(c => c.gameMode === 'versus' && c.won)
+    .map(c => c.score); // For versus, score is the streak length when game ended
+
+  if (versusWins.length === 0) return 0;
+  return Math.max(...versusWins);
+}
+
 // Parse date string (DD-MM-YYYY) to timestamp
 function parseDateToTimestamp(dateStr: string): number {
   const [day, month, year] = dateStr.split('-').map(Number);
@@ -130,13 +140,17 @@ function getTodayUruguay(): string {
   return `${day}-${month}-${year}`;
 }
 
-// Clear synced game data from localStorage to prevent duplicate accounts
-function clearSyncedGameData(): void {
+// Clear all game-related localStorage keys (called on logout)
+function clearGameLocalStorage(): void {
   const keysToRemove: string[] = [];
 
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key?.startsWith('missing11_') || key?.startsWith('guessPlayer_solved_')) {
+    if (
+      key?.startsWith('missing11_') ||
+      key?.startsWith('guessPlayer_solved_') ||
+      key === 'versus_gameState'
+    ) {
       keysToRemove.push(key);
     }
   }
@@ -144,7 +158,79 @@ function clearSyncedGameData(): void {
   keysToRemove.forEach((key) => localStorage.removeItem(key));
 }
 
-// Helper function to collect and migrate localStorage data to server
+// Populate localStorage from database completions (called on login)
+function populateLocalStorageFromCompletions(completions: GameCompletion[]): void {
+  // Group completions by game mode
+  const wordleCompletions = completions.filter(c => c.gameMode === 'wordle');
+  const guessPlayerCompletions = completions.filter(c => c.gameMode === 'guess_player_scheduled');
+  const versusCompletions = completions.filter(c => c.gameMode === 'versus');
+
+  // Populate Missing11 completions
+  for (const completion of wordleCompletions) {
+    const key = `missing11_${completion.gameDate}`;
+    // Only set if not already in localStorage (don't overwrite active game state)
+    if (!localStorage.getItem(key)) {
+      // Create a synthetic completed state
+      const syntheticSolved: Record<number, number> = {};
+      const avgGuesses = Math.ceil(completion.score / 11);
+      for (let i = 1; i <= 11; i++) {
+        syntheticSolved[i] = avgGuesses;
+      }
+      const state = {
+        guesses: {},
+        solved: syntheticSolved,
+        currentPlayer: 2,
+        fieldMode: true,
+        gameOver: true,
+      };
+      localStorage.setItem(key, JSON.stringify(state));
+    }
+  }
+
+  // Populate Guess the Player completions
+  for (const completion of guessPlayerCompletions) {
+    const key = `guessPlayer_solved_${completion.gameDate}`;
+    // Only set if not already in localStorage
+    if (!localStorage.getItem(key)) {
+      const data = {
+        guessCount: completion.score,
+        won: completion.won,
+      };
+      localStorage.setItem(key, JSON.stringify(data));
+    }
+  }
+
+  // Populate Versus best streak
+  if (versusCompletions.length > 0) {
+    const bestStreak = calculateVersusBestStreak(versusCompletions);
+    const existingState = localStorage.getItem('versus_gameState');
+
+    if (existingState) {
+      try {
+        const parsed = JSON.parse(existingState);
+        // Only update if DB has a better streak
+        if (bestStreak > (parsed.bestStreak || 0)) {
+          parsed.bestStreak = bestStreak;
+          localStorage.setItem('versus_gameState', JSON.stringify(parsed));
+        }
+      } catch {
+        // Invalid state, create new
+        localStorage.setItem('versus_gameState', JSON.stringify({
+          currentStreak: 0,
+          bestStreak: bestStreak,
+        }));
+      }
+    } else {
+      // No existing state, create with best streak from DB
+      localStorage.setItem('versus_gameState', JSON.stringify({
+        currentStreak: 0,
+        bestStreak: bestStreak,
+      }));
+    }
+  }
+}
+
+// Helper function to collect and migrate localStorage data to server (does NOT clear localStorage)
 async function performMigration(): Promise<boolean> {
   const migrationData: MigrationPayload = {
     wordle: [],
@@ -215,8 +301,8 @@ async function performMigration(): Promise<boolean> {
       });
 
       if (res.ok) {
-        // Clear synced data from localStorage to prevent duplicate accounts
-        clearSyncedGameData();
+        // NOTE: We no longer clear localStorage after migration
+        // localStorage stays intact so games continue to work
         return true;
       }
     } catch {
@@ -227,26 +313,32 @@ async function performMigration(): Promise<boolean> {
   return false;
 }
 
+// Fetch completions from DB and populate localStorage + calculate streaks
+async function syncFromDatabase(): Promise<Record<string, StreakData>> {
+  try {
+    const res = await fetch('/api/user/completions');
+    if (res.ok) {
+      const data = await res.json();
+      const completions: GameCompletion[] = data.completions || [];
+
+      // Populate localStorage from DB completions
+      populateLocalStorageFromCompletions(completions);
+
+      // Calculate and return streaks
+      return calculateStreaksFromCompletions(completions);
+    }
+  } catch {
+    console.error('Error syncing from database');
+  }
+  return {};
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [streaks, setStreaks] = useState<Record<string, StreakData>>({});
 
-  // Fetch completions and calculate streaks
-  const fetchAndCalculateStreaks = async () => {
-    try {
-      const res = await fetch('/api/user/completions');
-      if (res.ok) {
-        const data = await res.json();
-        const calculatedStreaks = calculateStreaksFromCompletions(data.completions || []);
-        setStreaks(calculatedStreaks);
-      }
-    } catch {
-      console.error('Error fetching completions for streak calculation');
-    }
-  };
-
-  // Check session on mount and auto-sync if needed
+  // Check session on mount
   useEffect(() => {
     fetch('/api/auth/me')
       .then((res) => (res.ok ? res.json() : null))
@@ -254,14 +346,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data?.user) {
           setUser(data.user);
 
-          // Auto-sync localStorage data if not already synced
-          if (!isDataSynced(data.user.id)) {
+          // Migrate localStorage to DB if not already done (first time this user logs in on this device)
+          if (!isDataMigrated(data.user.id)) {
             await performMigration();
-            markDataSynced(data.user.id);
+            markDataMigrated(data.user.id);
           }
 
-          // Calculate streaks from completions
-          await fetchAndCalculateStreaks();
+          // Sync from DB: populate localStorage and calculate streaks
+          const calculatedStreaks = await syncFromDatabase();
+          setStreaks(calculatedStreaks);
         }
       })
       .finally(() => setIsLoading(false));
@@ -279,14 +372,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         setUser(data.user);
 
-        // Auto-sync localStorage data if not already synced
-        if (!isDataSynced(data.user.id)) {
+        // Migrate localStorage to DB if not already done
+        if (!isDataMigrated(data.user.id)) {
           await performMigration();
-          markDataSynced(data.user.id);
+          markDataMigrated(data.user.id);
         }
 
-        // Calculate streaks from completions
-        await fetchAndCalculateStreaks();
+        // Sync from DB: populate localStorage and calculate streaks
+        const calculatedStreaks = await syncFromDatabase();
+        setStreaks(calculatedStreaks);
 
         return { success: true };
       }
@@ -311,11 +405,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // For new users, migrate localStorage data immediately
         if (data.isNewUser) {
           await performMigration();
-          markDataSynced(data.user.id);
+          markDataMigrated(data.user.id);
         }
 
-        // Calculate streaks from completions
-        await fetchAndCalculateStreaks();
+        // Sync from DB (will have the newly migrated data)
+        const calculatedStreaks = await syncFromDatabase();
+        setStreaks(calculatedStreaks);
 
         return { success: true, isNewUser: data.isNewUser };
       }
@@ -327,6 +422,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
+
+    // Clear game-related localStorage on logout
+    clearGameLocalStorage();
+
     setUser(null);
     setStreaks({});
   };
@@ -335,17 +434,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     await performMigration();
-    markDataSynced(user.id);
+    markDataMigrated(user.id);
 
     // Recalculate streaks from completions
-    await fetchAndCalculateStreaks();
+    const calculatedStreaks = await syncFromDatabase();
+    setStreaks(calculatedStreaks);
   }, [user]);
 
   const refreshStreaks = async () => {
     if (!user) return;
 
     try {
-      // Fetch completions and calculate streaks locally
       const res = await fetch('/api/user/completions');
       if (res.ok) {
         const data = await res.json();
